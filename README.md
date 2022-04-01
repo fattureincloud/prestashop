@@ -1,4 +1,4 @@
-# fattureincloud/prestashop v2
+# Fatture in Cloud ↔️ Prestashop
 
 Modulo Prestashop per Fatture in Cloud.
 
