@@ -145,8 +145,6 @@ class fattureincloud extends Module
     */
     public function getContent()
     {
-        // isset($_POST[$submit]) OR isset($_POST[$submit.'_x']) OR isset($_POST[$submit.'_y'])
-        // OR isset($_GET[$submit]) OR isset($_GET[$submit.'_x']) OR isset($_GET[$submit.'_y'])
         if (((bool)Tools::isSubmit('submitFattureInCloudModule')) == true) {
             $this->postProcess();
         }
@@ -820,11 +818,7 @@ class fattureincloud extends Module
             
                 $invoice_to_create = $this->composeInvoice($order_id);
                 
-                $this->writeLog("DEBUG - INVOICE: " . json_encode($invoice_to_create));
-                
                 $create_invoice_request = $fic_client->createIssuedDocument($invoice_to_create);
-                
-                $this->writeLog("DEBUG - INVOICE REWQUEST: " . json_encode($create_invoice_request));
                 
                 if (isset($create_invoice_request['error'])) {
                     $this->writeLog("ERROR - Fattura non creata: " . json_encode($create_invoice_request) . " - " . $fic_client->toJson());
