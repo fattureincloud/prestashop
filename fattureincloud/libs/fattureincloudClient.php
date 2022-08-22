@@ -11,8 +11,7 @@ class FattureInCloudClient
 {
     private $apiBaseUrl = "https://api-v2.fattureincloud.it";
     private $clientId = "NTRjNjY0MjU1YzBiODFhYmI4MDc0NGFm";
-    private $clientSecret = "RQg9xcbF3M6Uwb4RvEAV6KmCIahqqUJ3ng4OlUkWoxrKfTYD3m47f2pLNycdVSQZ";
-    private $scope = "entity.clients:a issued_documents.orders:a issued_documents.invoices:a settings:a";
+    private $scope = "entity.clients:a issued_documents.orders:a issued_documents.invoices:a settings:a products:a";
     private $redirectUri = "https://fattureincloud.it/connetti";
     private $maxRetry = 2;
     
@@ -93,7 +92,6 @@ class FattureInCloudClient
         $data = array(
             "grant_type" => "refresh_token",
             "client_id" => $this->clientId,
-            "client_secret" => $this->clientSecret,
             "refresh_token" => $this->refreshToken
         );
         
@@ -134,6 +132,13 @@ class FattureInCloudClient
     public function editClient($data)
     {
         $return = $this->makeCompanyRequest("entities/clients/" . $data['data']['id'], $data, "PUT");
+        
+        return $return;
+    }
+    
+    public function getProducts($filters)
+    {
+        $return = $this->makeCompanyRequest("products", $filters);
         
         return $return;
     }
@@ -302,12 +307,16 @@ class FattureInCloudClient
                         break;
                     case 403:
                         $return = $data;
-                        $return['retry-after'] = $headers['retry-after'];
+                        if (isset($headers['retry-after'])) { 
+                            $return['retry-after'] = $headers['retry-after'];
+                        }
                         $makeRequest = false;
                         break;
                     case 429:
                         $return = $data;
-                        $return['retry-after'] = $headers['retry-after'];
+                        if (isset($headers['retry-after'])) { 
+                            $return['retry-after'] = $headers['retry-after'];
+                        }
                         $makeRequest = false;
                         break;
                     case 401:
@@ -398,12 +407,16 @@ class FattureInCloudClient
                         break;
                     case 403:
                         $return = $data;
-                        $return['retry-after'] = $headers['retry-after'];
+                        if (isset($headers['retry-after'])) { 
+                            $return['retry-after'] = $headers['retry-after'];
+                        }
                         $makeRequest = false;
                         break;
                     case 429:
                         $return = $data;
-                        $return['retry-after'] = $headers['retry-after'];
+                        if (isset($headers['retry-after'])) { 
+                            $return['retry-after'] = $headers['retry-after'];
+                        }
                         $makeRequest = false;
                         break;
                     case 401:

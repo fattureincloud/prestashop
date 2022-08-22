@@ -28,7 +28,7 @@ class fattureincloud extends Module
     {
         $this->name = 'fattureincloud';
         $this->tab = 'billing_invoicing';
-        $this->version = '2.0.0';
+        $this->version = '2.1.0';
         $this->author = 'FattureInCloud';
         $this->need_instance = 1;
 
@@ -768,8 +768,10 @@ class fattureincloud extends Module
         }
         
         if (Configuration::get('FATTUREINCLOUD_ORDERS_UPDATE_STORAGE')) {
-            foreach ($order_to_create['data']['items_list'] as $item) {
-                $item['stock'] = true;
+            foreach ($order_to_create['data']['items_list'] as $key => $item) {
+                if (isset($item['product_id'])) {
+                    $order_to_create['data']['items_list'][$key]['stock'] = true;
+                }
             }
         }
         
@@ -1035,7 +1037,11 @@ class fattureincloud extends Module
         $entity['address_street'] = $composed_billing_address;
         $entity['address_postal_code'] = $billing_address->postcode;
         $entity['address_city'] = $billing_address->city;
-        $entity['address_province'] = $billing_address_state->iso_code;
+        
+        if (!empty($billing_address_state->iso_code)) {
+            $entity['address_province'] = $billing_address_state->iso_code;
+        }
+        
         $entity['country_iso'] = $billing_address_country->iso_code;
         $entity['shipping_address'] = $composed_shipping_address;
         
@@ -1168,7 +1174,10 @@ class fattureincloud extends Module
         $items = array();
         $products = $order->getProducts();
         
+        $fic_no_vat_id = $this->getDefaultVatID(0, null);
+        
         foreach ($products as $product) {
+            
             $item = array();
             
             if (!empty($product['product_reference'])) {
@@ -1177,22 +1186,56 @@ class fattureincloud extends Module
                 $item['code'] = $product['reference'];
             }
             
+            if (!empty($item['code'])) {
+                $check_product_filters["filter"][] = array(
+                    "field" => "code",
+                    "value" => $item['code'],
+                    "op" => "="
+                );
+                
+                $check_product_request = $fic_client->getProducts($check_product_filters);
+                
+                if (isset($check_product_request['error'])) {
+                    $this->writeLog("ERROR - Ricerca prodotto fallita: " . json_encode($check_product_request));
+                } elseif ($check_product_request['total'] == 1) {
+                    $item['product_id'] = $check_product_request['data'][0]['id'];
+                }
+            }
+            
             $item['name'] = $product['product_name'];
             $item['qty'] = $product['product_quantity'];
             
-            if (!empty($product['reduction_percent'])) {
+            if (!empty($product['reduction_percent']) && floatval($product['reduction_percent']) > 0) {
                 $item['net_price'] = $product['original_product_price'];
                 $item['discount'] = $product['reduction_percent'];
+            } else if (!empty($product['reduction_amount_tax_excl']) && floatval($product['reduction_amount_tax_excl']) > 0) {
+                $item['net_price'] = $product['original_product_price'];
             } else {
                 $item['net_price'] = $product['product_price'];
             }
             
-            $vat_id = $product['tax_calculator']->taxes[0]->id;
-            
             $item['vat'] = array();
-            $item['vat']['id'] = $this->getVatID($vat_id);
+            $item['vat']['id'] = $fic_no_vat_id;
+            
+            if (!empty($product['tax_calculator']->taxes[0])) {
+                $vat_id = $product['tax_calculator']->taxes[0]->id;
+                $item['vat']['id'] = $this->getVatID($vat_id);
+            }
             
             $items[] = $item;
+            
+            if (!empty($product['reduction_amount_tax_excl']) && floatval($product['reduction_amount_tax_excl']) > 0) {
+                    
+                $discount_item = array(
+                    'name' => 'Sconto applicato',
+                    'qty' => 1,
+                    'net_price' => - $product['reduction_amount_tax_excl'],
+                    'vat' => $item['vat']
+                );
+                
+                $items[] = $discount_item;
+            }
+            
         }
         
         $coupons = $order->getCartRules();
@@ -1224,8 +1267,13 @@ class fattureincloud extends Module
         
         $carrier = new Carrier($order->id_carrier);
         
-        $carrier_vat_id = $carrier->getTaxCalculator($shipping_address)->taxes[0]->id;
-                    
+        $fic_carrier_vat_id = $fic_no_vat_id;
+        
+        if (!empty($carrier->getTaxCalculator($shipping_address)->taxes[0])) {
+            $carrier_vat_id = $carrier->getTaxCalculator($shipping_address)->taxes[0]->id;
+            $fic_carrier_vat_id = $this->getVatID($carrier_vat_id);
+        }
+        
         if ($order->total_shipping > 0) {
             
             // Check strange extra shipping cost
@@ -1238,7 +1286,7 @@ class fattureincloud extends Module
                 $item['net_price'] = $order->total_shipping_tax_excl;
                 
                 $item['vat'] = array();
-                $item['vat']['id'] = $this->getVatID($carrier_vat_id);
+                $item['vat']['id'] = $fic_carrier_vat_id;
                 
                 $items[] = $item;
             } else {
@@ -1252,14 +1300,14 @@ class fattureincloud extends Module
                 $item['name'] = "Spedizione: " . $carrier->name;
                 $item['net_price'] = $real_shipping_cost;
                 $item['vat'] = array();
-                $item['vat']['id'] = $this->getVatID($carrier_vat_id);
+                $item['vat']['id'] = $fic_carrier_vat_id;
                 $items[] = $item;
                 
                 $item = array();
                 $item['name'] = "Extra Spedizione";
                 $item['net_price'] = $other_costs_net;
                 $item['vat'] = array();
-                $item['vat']['id'] = $this->getVatID($carrier_vat_id);
+                $item['vat']['id'] = $fic_carrier_vat_id;
                 $items[] = $item;
             }
         }
@@ -1274,7 +1322,7 @@ class fattureincloud extends Module
                 $item['name'] = "Imballo";
                 $item['net_price'] = $order->total_wrapping_tax_excl;
                 $item['vat'] = array();
-                $item['vat']['id'] = $this->getVatID($carrier_vat_id);
+                $item['vat']['id'] = $fic_carrier_vat_id;
                 $items[] = $item;
             } else {
                 $tax_difference = $order->total_wrapping_tax_incl - $order->total_wrapping_tax_excl;
@@ -1287,14 +1335,14 @@ class fattureincloud extends Module
                 $item['name'] = "Imballo";
                 $item['net_price'] = $real_wrapping_cost;
                 $item['vat'] = array();
-                $item['vat']['id'] = $this->getVatID($carrier_vat_id);
+                $item['vat']['id'] = $fic_carrier_vat_id;
                 $items[] = $item;
                 
                 $item = array();
                 $item['name'] = "Extra Imballo";
                 $item['net_price'] = $other_costs_net;
                 $item['vat'] = array();
-                $item['vat']['id'] = $this->getVatID($carrier_vat_id);
+                $item['vat']['id'] = $fic_carrier_vat_id;
                 $items[] = $item;
             }
         }
