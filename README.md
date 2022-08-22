@@ -8,7 +8,7 @@ Questo modulo è compatibile con versioni **uguali o superiori alla 1.7.6** di P
 
 | Versione fattureincloud/prestashop | Versione Prestashop richiesta |
 | ---------------------------------- | ----------------------------- |
-| 2.0.x                              | 1.7.6 o superiore             |
+| 2.0.x, 2.1.x                       | 1.7.6 o superiore             |
 
 ## Funzionalità
 
