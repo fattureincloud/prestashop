@@ -723,8 +723,8 @@ class fattureincloud extends Module
                 
                 $create_order_request = $fic_client->createIssuedDocument($order_to_create);
                 
-                if (isset($create_order_request['error'])) {
-                    $this->writeLog("ERROR - Ordine non creato: " . json_encode($create_order_request));
+                if (!$create_order_request || isset($create_order_request['error'])) {
+                    $this->writeLog("ERROR - Ordine non creato: " . json_encode($create_order_request) . " - " . $fic_client->toJson());
                 } else {
                     $number_to_save = $create_order_request['data']['number'];
                     
@@ -822,7 +822,7 @@ class fattureincloud extends Module
                 
                 $create_invoice_request = $fic_client->createIssuedDocument($invoice_to_create);
                 
-                if (isset($create_invoice_request['error'])) {
+                if (!$create_invoice_request || isset($create_invoice_request['error'])) {
                     $this->writeLog("ERROR - Fattura non creata: " . json_encode($create_invoice_request) . " - " . $fic_client->toJson());
                 } else {
                     $number_to_save = $create_invoice_request['data']['number'];
@@ -1351,11 +1351,11 @@ class fattureincloud extends Module
         
         $payments = array();
         $payment = array();
-        $payment['due_date'] = $order->date_add;
+        $payment['due_date'] = date("Y-m-d", strtotime($order->date_add));
         
         if ($order_state->paid) {
             $payment['status'] = "paid";
-            $payment['paid_date'] = $order->invoice_date;
+            $payment['paid_date'] = date("Y-m-d", strtotime($order->invoice_date));
             $payment['payment_account'] = array("id" => $this->getPaymentAccountIDByName($order->payment));
         } else {
             $payment['status'] = "not_paid";
