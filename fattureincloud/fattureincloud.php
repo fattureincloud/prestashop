@@ -724,7 +724,7 @@ class fattureincloud extends Module
                 $create_order_request = $fic_client->createIssuedDocument($order_to_create);
                 
                 if (!$create_order_request || isset($create_order_request['error'])) {
-                    $this->writeLog("ERROR - Ordine non creato: " . json_encode($create_order_request) . " - " . $fic_client->toJson());
+                    $this->writeLog("ERROR - Ordine non creato: " . json_encode($create_order_request) . " - " . $fic_client->toJson() . " - " . json_encode($order_to_create));
                 } else {
                     $number_to_save = $create_order_request['data']['number'];
                     
@@ -823,7 +823,7 @@ class fattureincloud extends Module
                 $create_invoice_request = $fic_client->createIssuedDocument($invoice_to_create);
                 
                 if (!$create_invoice_request || isset($create_invoice_request['error'])) {
-                    $this->writeLog("ERROR - Fattura non creata: " . json_encode($create_invoice_request) . " - " . $fic_client->toJson());
+                    $this->writeLog("ERROR - Fattura non creata: " . json_encode($create_invoice_request) . " - " . $fic_client->toJson() . " - " . json_encode($invoice_to_create));
                 } else {
                     $number_to_save = $create_invoice_request['data']['number'];
                     
@@ -1354,9 +1354,18 @@ class fattureincloud extends Module
         $payment['due_date'] = date("Y-m-d", strtotime($order->date_add));
         
         if ($order_state->paid) {
+            
+            $paid_date_time = strtotime($order->invoice_date);
+            
+            if ($paid_date_time > 0) {
+                $payment['paid_date'] = date("Y-m-d", $paid_date_time);
+            } else {
+                $payment['paid_date'] = date("Y-m-d");
+            }
+            
             $payment['status'] = "paid";
-            $payment['paid_date'] = date("Y-m-d", strtotime($order->invoice_date));
             $payment['payment_account'] = array("id" => $this->getPaymentAccountIDByName($order->payment));
+       
         } else {
             $payment['status'] = "not_paid";
         }
