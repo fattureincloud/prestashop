@@ -28,7 +28,7 @@ class fattureincloud extends Module
     {
         $this->name = 'fattureincloud';
         $this->tab = 'billing_invoicing';
-        $this->version = '2.1.1';
+        $this->version = '2.1.2';
         $this->author = 'FattureInCloud';
         $this->need_instance = 1;
 
