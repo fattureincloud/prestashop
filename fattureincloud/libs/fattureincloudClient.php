@@ -10,6 +10,7 @@
 class FattureInCloudClient
 {
     private $apiBaseUrl = "https://api-v2.fattureincloud.it";
+    private $userAgent;
     private $clientId = "NTRjNjY0MjU1YzBiODFhYmI4MDc0NGFm";
     private $scope = "entity.clients:a issued_documents.orders:a issued_documents.invoices:a settings:a products:a";
     private $redirectUri = "https://fattureincloud.it/connetti";
@@ -60,6 +61,11 @@ class FattureInCloudClient
     public function setCompanyId($companyId)
     {
         $this->companyId = $companyId;
+    }
+    
+    public function setUserAgent($userAgent)
+    {
+        $this->userAgent = $userAgent;
     }
     
     public function oauthDevice()
@@ -277,6 +283,7 @@ class FattureInCloudClient
                     break;
             }
             
+            curl_setopt($ch, CURLOPT_USERAGENT, $this->userAgent);
             curl_setopt($ch, CURLOPT_URL, $this->apiBaseUrl . '/'. $endpoint);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_HTTPHEADER, array("Authorization: Bearer " . $this->accessToken , "Accept: application/json", "Content-Type: application/json"));
@@ -376,7 +383,8 @@ class FattureInCloudClient
                     }
                     break;
             }
-            
+        
+            curl_setopt($ch, CURLOPT_USERAGENT, $this->userAgent);
             curl_setopt($ch, CURLOPT_URL, $this->apiBaseUrl . '/c/' . $this->companyId . '/'. $endpoint);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_HTTPHEADER, array("Authorization: Bearer " . $this->accessToken , "Accept: application/json", "Content-Type: application/json"));

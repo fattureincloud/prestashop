@@ -28,7 +28,7 @@ class fattureincloud extends Module
     {
         $this->name = 'fattureincloud';
         $this->tab = 'billing_invoicing';
-        $this->version = '2.1.2';
+        $this->version = '2.1.3';
         $this->author = 'FattureInCloud';
         $this->need_instance = 1;
 
@@ -156,6 +156,7 @@ class fattureincloud extends Module
         
         if (Configuration::get('FATTUREINCLOUD_ACCESS_TOKEN') == "" || Configuration::get('FATTUREINCLOUD_REFRESH_TOKEN') == "") {
             $fic_client = new FattureInCloudClient();
+            $fic_client->setUserAgent("FattureInCloud/Prestashop/" . $this->version);
             $device_code_request = $fic_client->oauthDevice();
             
             $this->context->smarty->assign('device_code_request', $device_code_request);
@@ -163,8 +164,9 @@ class fattureincloud extends Module
             $output = $this->context->smarty->fetch($this->local_path.'views/templates/admin/connect.tpl');
         } elseif (Configuration::get('FATTUREINCLOUD_COMPANY_ID') == "" && Configuration::get('FATTUREINCLOUD_ACCESS_TOKEN') != "" && Configuration::get('FATTUREINCLOUD_REFRESH_TOKEN') != "") {
             $fic_client = new FattureInCloudClient();
+            $fic_client->setUserAgent("FattureInCloud/Prestashop/" . $this->version);
             $fic_client->setAccessToken(Configuration::get('FATTUREINCLOUD_ACCESS_TOKEN'));
-                
+            
             $controlled_companies_request = $fic_client->getControlledCompanies();
                 
             $this->context->smarty->assign('controlled_companies_request', $controlled_companies_request);
@@ -759,21 +761,7 @@ class fattureincloud extends Module
      */
     public function composeOrder($order_id)
     {
-        $order_to_create = $this->mapPrestashopToFicDocument($order_id);
-        
-        $order_to_create['data']['type'] = "order";
-        
-        if (Configuration::get('FATTUREINCLOUD_ORDERS_SUFFIX')) {
-            $order_to_create['data']['numeration'] = Configuration::get('FATTUREINCLOUD_ORDERS_SUFFIX');
-        }
-        
-        if (Configuration::get('FATTUREINCLOUD_ORDERS_UPDATE_STORAGE')) {
-            foreach ($order_to_create['data']['items_list'] as $key => $item) {
-                if (isset($item['product_id'])) {
-                    $order_to_create['data']['items_list'][$key]['stock'] = true;
-                }
-            }
-        }
+        $order_to_create = $this->mapPrestashopToFicDocument("order", $order_id);
         
         return $order_to_create;
     }
@@ -875,18 +863,8 @@ class fattureincloud extends Module
      */
     public function composeInvoice($order_id)
     {
-        $invoice_to_create = $this->mapPrestashopToFicDocument($order_id);
-        
-        $invoice_to_create['data']['type'] = "invoice";
-        
-        if (Configuration::get('FATTUREINCLOUD_INVOICES_SUFFIX')) {
-            $invoice_to_create['data']['numeration'] = Configuration::get('FATTUREINCLOUD_INVOICES_SUFFIX');
-        }
-        
-        if (Configuration::get('FATTUREINCLOUD_INVOICES_SEND_TO_SDI')) {
-            $invoice_to_create['data']['ei_invoice'] = true;
-        }
-        
+        $invoice_to_create = $this->mapPrestashopToFicDocument("invoice", $order_id);
+       
         return $invoice_to_create;
     }
     
@@ -979,9 +957,40 @@ class fattureincloud extends Module
     }
     
     /**
+     * Get MPXX code by Prestashop payment module
+     */
+    public function getEIPaymentCodeByModule($payment_module)
+    {
+        
+        $ei_payment = array();
+        
+        $ei_payment['payment_method'] = "MP08";
+        
+        if ($payment_module == 'ps_cashondelivery') { 
+            $ei_payment['payment_method'] = "MP01";
+        } elseif ($payment_module == 'ps_checkpayment') { 
+            $ei_payment['payment_method'] = "MP02";
+        } elseif (strpos($payment_module, 'wire') !== false) { 
+            $ei_payment['payment_method'] = "MP05";
+            
+            $payment_module_details = Module::getInstanceByName($payment_module);
+            
+            if (!empty($payment_module_details->owner)) {
+                $ei_payment['bank_beneficiary'] = $payment_module_details->owner;
+            }
+            
+            if (!empty($payment_module_details->details)) {
+                $ei_payment['bank_iban'] = $payment_module_details->details;
+            }
+        } 
+        
+        return $ei_payment;
+    }
+    
+    /**
      * Map Prestashop order to FattureInCloud issuedDocument model
      */
-    public function mapPrestashopToFicDocument($order_id)
+    public function mapPrestashopToFicDocument($document_type, $order_id)
     {
         $order = new Order($order_id);
        
@@ -1199,6 +1208,10 @@ class fattureincloud extends Module
                     $this->writeLog("ERROR - Ricerca prodotto fallita: " . json_encode($check_product_request));
                 } elseif ($check_product_request['total'] == 1) {
                     $item['product_id'] = $check_product_request['data'][0]['id'];
+                    
+                    if ($document_type == "order" && Configuration::get('FATTUREINCLOUD_ORDERS_UPDATE_STORAGE')) {
+                        $item['stock'] = true;
+                    }
                 }
             }
             
@@ -1381,6 +1394,7 @@ class fattureincloud extends Module
         
         $document = array(
             "data" => array(
+                "type" => $document_type,
                 "currency" => $currency,
                 "entity" => $entity,
                 "items_list" => $items,
@@ -1405,6 +1419,25 @@ class fattureincloud extends Module
         
         if ($notes = $order->getFirstMessage()) {
             $document["data"]["notes"] = $notes;
+        }
+        
+        if ($document_type == "order") {
+            
+            if (Configuration::get('FATTUREINCLOUD_ORDERS_SUFFIX')) {
+                $document['data']['numeration'] = Configuration::get('FATTUREINCLOUD_ORDERS_SUFFIX');
+            }
+            
+        } elseif ($document_type == "invoice") {
+        
+            if (Configuration::get('FATTUREINCLOUD_INVOICES_SUFFIX')) {
+                $document['data']['numeration'] = Configuration::get('FATTUREINCLOUD_INVOICES_SUFFIX');
+            }
+            
+            if (Configuration::get('FATTUREINCLOUD_INVOICES_SEND_TO_SDI')) {
+                $document['data']['e_invoice'] = true;
+                $document['data']['ei_data'] = $this->getEIPaymentCodeByModule($order->module);
+            }
+        
         }
         
         return $document;
@@ -1503,6 +1536,8 @@ class fattureincloud extends Module
         $fic_client->setAccessToken(Configuration::get('FATTUREINCLOUD_ACCESS_TOKEN'));
         $fic_client->setRefreshToken(Configuration::get('FATTUREINCLOUD_REFRESH_TOKEN'));
         
+        $fic_client->setUserAgent("FattureInCloud/Prestashop/" . $this->version);
+        
         $refresh_token_request = $fic_client->oauthRefreshToken();
         
         if (isset($refresh_token_request['access_token'])) {
@@ -1541,7 +1576,7 @@ class fattureincloud extends Module
             }
         }
         
-        $log_line = "[" . date("Y/m/d h:i:s", time()) . "] " . $line . "\n";
+        $log_line = "[" . date("Y/m/d h:i:s", time()) . "] [v" . $this->version . "] " . $line . "\n";
         file_put_contents($current_log_file, $log_line, FILE_APPEND);
     }
 }

@@ -10,88 +10,112 @@ var fattureincloud = function() {
 	
 	var initConnect = function(interval, device_code) {
 		
-		$(".connect-error").click(function() {
-			location.reload();
-		});
-		
-		pollForAccessToken(interval, device_code);
+		try {
+			
+			$(".connect-error").click(function() {
+				location.reload();
+			});
+			
+			pollForAccessToken(interval, device_code);
+			
+		} catch(e) {
+			console.error(e);
+		}
 	}
 	
 	var pollForAccessToken = function(interval, device_code) {
 		
-		$.ajax({
-			url: admin_controller_link,
-			data: {
-				ajax: true,
-				action: 'getaccesstoken',
-				device_code: device_code
-			},
-			dataType: "json",
-			success : function(result){
-				
-				if (typeof result.error !== "undefined") {
-					if (result.error == "authorization_pending") {
-						setTimeout(function() { 
-							pollForAccessToken(interval, device_code); 
-						}, interval * 1000);
+		try {
+			
+			$.ajax({
+				url: admin_controller_link,
+				data: {
+					ajax: true,
+					action: 'getaccesstoken',
+					device_code: device_code
+				},
+				dataType: "json",
+				success : function(result){
 					
+					if (typeof result.error !== "undefined") {
+						if (result.error == "authorization_pending") {
+							setTimeout(function() { 
+								pollForAccessToken(interval, device_code); 
+							}, interval * 1000);
+						
+						} else {
+							
+							$(".connect-container").addClass("hidden");
+							
+							var errorDetails = result.error + ": " + result.error_description;
+							$(".connect-error-details").html(errorDetails);
+							$(".connect-error").removeClass("hidden");
+						}
+						
 					} else {
-						
-						$(".connect-container").addClass("hidden");
-						
-						var errorDetails = result.error + ": " + result.error_description;
-						$(".connect-error-details").html(errorDetails);
-						$(".connect-error").removeClass("hidden");
+						location.reload();
 					}
-					
-				} else {
-					location.reload();
 				}
-			}
-		});
+			});
+			
+		} catch(e) {
+			console.error(e);
+		}
 	}
 	
 	var initSelectCompany = function() {
 		
-		$(".connect-error").click(function() {
-			location.reload();
-		});
+		try {
 			
-		$("button[data-company-id]").click(function() {
-			
-			$("button[data-company-id]").addClass("disabled");
-			$("button[data-company-id]").prop("disabled", true);
-			
-			saveCompanyId($(this).data("company-id"));
-		});
+			$(".connect-error").click(function() {
+				location.reload();
+			});
+				
+			$("button[data-company-id]").click(function() {
+				
+				$("button[data-company-id]").addClass("disabled");
+				$("button[data-company-id]").prop("disabled", true);
+				
+				saveCompanyId($(this).data("company-id"));
+			});
+		
+		} catch(e) {
+			console.error(e);
+		}
 		
 	}
 	
 	var saveCompanyId = function(company_id) {
-				
-		$.ajax({
-			url: admin_controller_link,
-			data: {
-				ajax: true,
-				action: 'savecompanyid',
-				company_id: company_id
-			},
-			dataType: "json",
-			success : function(result){
-				
-				if (typeof result.error !== "undefined") {
+		
+		try {
+			
+			$.ajax({
+				url: admin_controller_link,
+				data: {
+					ajax: true,
+					action: 'savecompanyid',
+					company_id: company_id
+				},
+				dataType: "json",
+				success : function(result){
 					
-					$(".connect-container").addClass("hidden");
-											
-					var errorDetails = result.error + ": " + result.error_description;
-					$(".connect-error-details").html(errorDetails);
-					$(".connect-error").removeClass("hidden");
-											
-				} else {
-					location.reload();
+					if (typeof result.error !== "undefined") {
+						
+						$(".connect-container").addClass("hidden");
+												
+						var errorDetails = result.error + ": " + result.error_description;
+						$(".connect-error-details").html(errorDetails);
+						$(".connect-error").removeClass("hidden");
+												
+					} else {
+						location.reload();
+					}
 				}
-			}
-		});
+			});
+			
+		} catch(e) {
+			console.error(e);
+		}
 	}
 	
 	return {
