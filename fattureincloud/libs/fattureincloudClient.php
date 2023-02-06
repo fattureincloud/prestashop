@@ -25,12 +25,6 @@ class FattureInCloudClient
     {
     }
     
-    // public function __construct($companyId, $accessToken)
-    // {
-    //     $this->companyId = $companyId;
-    //     $this->accessToken = $accessToken;
-    // }
-    
     public function toJson()
     {
         $output = array(

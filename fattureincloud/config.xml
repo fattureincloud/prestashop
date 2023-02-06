@@ -2,7 +2,7 @@
 <module>
 	<name>fattureincloud</name>
 	<displayName><![CDATA[FattureInCloud]]></displayName>
-	<version><![CDATA[2.1.3]]></version>
+	<version><![CDATA[2.1.4]]></version>
 	<description><![CDATA[Collega il tuo negozio Prestashop al tuo account FattureInCloud! Sincronizza gli ordini, le anagrafiche ed emetti fatture!]]></description>
 	<author><![CDATA[FattureInCloud]]></author>
 	<tab><![CDATA[billing_invoicing]]></tab>

@@ -28,7 +28,7 @@ class fattureincloud extends Module
     {
         $this->name = 'fattureincloud';
         $this->tab = 'billing_invoicing';
-        $this->version = '2.1.3';
+        $this->version = '2.1.4';
         $this->author = 'FattureInCloud';
         $this->need_instance = 1;
 
@@ -909,6 +909,16 @@ class fattureincloud extends Module
     }
     
     /**
+     * Calculate gross price by net price and tax rate
+     */
+    public function calculateGrossPrice($net_price, $tax_rate) {
+        
+        $price_to_return = $net_price + (($net_price * $tax_rate) / 100);
+        
+        return $price_to_return;
+    }
+    
+    /**
      * Get saved FattureInCloud VAT ID from tax table
      */
     public function getVatID($id_tax)
@@ -1219,12 +1229,14 @@ class fattureincloud extends Module
             $item['qty'] = $product['product_quantity'];
             
             if (!empty($product['reduction_percent']) && floatval($product['reduction_percent']) > 0) {
-                $item['net_price'] = $product['original_product_price'];
+                
+                $item['gross_price'] = $this->calculateGrossPrice($product['original_product_price'], $product['tax_rate']);
                 $item['discount'] = $product['reduction_percent'];
+            
             } else if (!empty($product['reduction_amount_tax_excl']) && floatval($product['reduction_amount_tax_excl']) > 0) {
-                $item['net_price'] = $product['original_product_price'];
+                $item['gross_price'] = $this->calculateGrossPrice($product['original_product_price'], $product['tax_rate']);
             } else {
-                $item['net_price'] = $product['product_price'];
+                $item['gross_price'] = $product['unit_price_tax_incl'];
             }
             
             $item['vat'] = array();
@@ -1242,7 +1254,7 @@ class fattureincloud extends Module
                 $discount_item = array(
                     'name' => 'Sconto applicato',
                     'qty' => 1,
-                    'net_price' => - $product['reduction_amount_tax_excl'],
+                    'gross_price' => - $product['reduction_amount_tax_incl'],
                     'vat' => $item['vat']
                 );
                 
@@ -1271,7 +1283,7 @@ class fattureincloud extends Module
                 'name' => 'Coupon utilizzati',
                 'description' => $coupon_description,
                 'qty' => count($used_coupons),
-                'net_price' => 0,
+                'grosss_price' => 0,
                 'vat' => array('id' => 6)
             );
             
@@ -1288,76 +1300,21 @@ class fattureincloud extends Module
         }
         
         if ($order->total_shipping > 0) {
-            
-            // Check strange extra shipping cost
-            $calculated_shipping_cost = $order->total_shipping_tax_excl + ($order->total_shipping_tax_excl * $order->carrier_tax_rate / 100);
-            
-            if ($calculated_shipping_cost == $order->total_shipping_tax_incl) {
-                $item = array();
-                
-                $item['name'] = "Spedizione: " . $carrier->name;
-                $item['net_price'] = $order->total_shipping_tax_excl;
-                
-                $item['vat'] = array();
-                $item['vat']['id'] = $fic_carrier_vat_id;
-                
-                $items[] = $item;
-            } else {
-                $tax_difference = $order->total_shipping_tax_incl - $order->total_shipping_tax_excl;
-                $real_shipping_cost = $tax_difference / $order->carrier_tax_rate * 100;
-                
-                $other_costs = $order->total_shipping_tax_excl - $real_shipping_cost;
-                $other_costs_net = $other_costs / (1 + ($order->carrier_tax_rate / 100));
-               
-                $item = array();
-                $item['name'] = "Spedizione: " . $carrier->name;
-                $item['net_price'] = $real_shipping_cost;
-                $item['vat'] = array();
-                $item['vat']['id'] = $fic_carrier_vat_id;
-                $items[] = $item;
-                
-                $item = array();
-                $item['name'] = "Extra Spedizione";
-                $item['net_price'] = $other_costs_net;
-                $item['vat'] = array();
-                $item['vat']['id'] = $fic_carrier_vat_id;
-                $items[] = $item;
-            }
+            $item = array();
+            $item['name'] = "Spedizione: " . $carrier->name;
+            $item['gross_price'] = $order->total_shipping_tax_incl;
+            $item['vat'] = array();
+            $item['vat']['id'] = $fic_carrier_vat_id;
+            $items[] = $item;
         }
         
         if ($order->total_wrapping > 0) {
-            
-            // Check strange extra wrapping cost
-            $calculated_wrapping_cost = $order->total_wrapping_tax_excl + ($order->total_wrapping_tax_excl * $order->carrier_tax_rate / 100);
-            
-            if ($calculated_wrapping_cost == $order->total_wrapping_tax_incl) {
-                $item = array();
-                $item['name'] = "Imballo";
-                $item['net_price'] = $order->total_wrapping_tax_excl;
-                $item['vat'] = array();
-                $item['vat']['id'] = $fic_carrier_vat_id;
-                $items[] = $item;
-            } else {
-                $tax_difference = $order->total_wrapping_tax_incl - $order->total_wrapping_tax_excl;
-                $real_wrapping_cost = $tax_difference / $order->carrier_tax_rate * 100;
-                
-                $other_costs = $order->total_wrapping_tax_excl - $real_wrapping_cost;
-                $other_costs_net = $other_costs / (1 + ($order->carrier_tax_rate / 100));
-                
-                $item = array();
-                $item['name'] = "Imballo";
-                $item['net_price'] = $real_wrapping_cost;
-                $item['vat'] = array();
-                $item['vat']['id'] = $fic_carrier_vat_id;
-                $items[] = $item;
-                
-                $item = array();
-                $item['name'] = "Extra Imballo";
-                $item['net_price'] = $other_costs_net;
-                $item['vat'] = array();
-                $item['vat']['id'] = $fic_carrier_vat_id;
-                $items[] = $item;
-            }
+            $item = array();
+            $item['name'] = "Imballo";
+            $item['gross_price'] = $order->total_wrapping_tax_incl;
+            $item['vat'] = array();
+            $item['vat']['id'] = $fic_carrier_vat_id;
+            $items[] = $item;
         }
         
         $order_state = new OrderState($order->current_state);
@@ -1406,7 +1363,8 @@ class fattureincloud extends Module
                 ),
                 "show_payment" => false,
                 "show_payment_method" => true,
-                "rc_center" => Configuration::get('FATTUREINCLOUD_RC_CENTER')
+                "rc_center" => Configuration::get('FATTUREINCLOUD_RC_CENTER'),
+                "use_gross_prices" => true
             ),
             "options" => array(
                 "fix_payments" => true
