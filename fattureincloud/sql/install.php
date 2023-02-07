@@ -25,6 +25,19 @@ $sql_create_main_table = 'CREATE TABLE IF NOT EXISTS `'._DB_PREFIX_.'fattureInCl
 
 Db::getInstance()->execute($sql_create_main_table);
 
+// Create sql table to store payment accounts
+try {
+    $sql_create_payment_accounts_table = 'CREATE TABLE IF NOT EXISTS `'._DB_PREFIX_.'fattureInCloud_payment_accounts` (
+        `id` int(11) NOT NULL AUTO_INCREMENT,
+        `payment_account_id` bigint(20),
+        `payment_account_name` varchar(255),
+        PRIMARY KEY  (`id`)
+    ) ENGINE='._MYSQL_ENGINE_.' DEFAULT CHARSET=utf8;';
+    
+    Db::getInstance()->execute($sql_create_payment_accounts_table);
+} catch (Exception $e) {
+}
+
 // Add new fields to fattureInCloud table ( to update old plugin versions )
 try {
     $sql_new_fields =  'ALTER TABLE `'. _DB_PREFIX_.'fattureInCloud` 

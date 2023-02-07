@@ -28,7 +28,7 @@ class fattureincloud extends Module
     {
         $this->name = 'fattureincloud';
         $this->tab = 'billing_invoicing';
-        $this->version = '2.1.4';
+        $this->version = '2.1.5';
         $this->author = 'FattureInCloud';
         $this->need_instance = 1;
 
@@ -943,15 +943,53 @@ class fattureincloud extends Module
     {
         $fic_client = $this->initFattureInCloudClient();
         
+        $query = 'SELECT p.*'
+            .' FROM `'. _DB_PREFIX_.'fattureInCloud_payment_accounts` p '
+            .' WHERE p.payment_account_name = "' . $payment_name . '";';
+            
+        $payment_details =  Db::getInstance(_PS_USE_SQL_SLAVE_)->getRow($query);
+        
+        if ($payment_details['payment_account_id'] != null) {
+            
+            $this->writeLog("INFO - Conto di pagamento già presente nel DB : " . json_encode($payment_details));
+            
+            return $payment_details['payment_account_id'];
+        }
+        
         $payment_accounts_request = $fic_client->getPaymentAccounts();
         
         if (isset($payment_accounts_request['error'])) {
             $this->writeLog("ERROR - Ricerca conti di pagamento fallita: " . json_encode($payment_accounts_request));
         } else {
+            
+            $this->writeLog("INFO - Importazione conti di pagamenti");
+            
+            $query = 'TRUNCATE TABLE `'._DB_PREFIX_.'fattureInCloud_payment_accounts`;';
+            Db::getInstance(_PS_USE_SQL_SLAVE_)->execute($query);
+                
+            $payment_id_to_return = 0;
+            
             foreach ($payment_accounts_request['data'] as $payment_account) {
+                
+                $query = 'INSERT INTO `'._DB_PREFIX_.'fattureInCloud_payment_accounts`
+                    (`payment_account_id`,`payment_account_name`)
+                    VALUES (
+                    '.$payment_account['id'].',
+                    "'.$payment_account['name'].'"
+                );';
+                
+                Db::getInstance(_PS_USE_SQL_SLAVE_)->execute($query);
+                
                 if (strtolower($payment_account['name']) == strtolower($payment_name)) {
-                    return $payment_account['id'];
+                    
+                    $this->writeLog("INFO - Conto di pagamento trovato su FattureInCloud: " . json_encode($payment_account));
+                    
+                    $payment_id_to_return = $payment_account['id'];
                 }
+            }
+            
+            if ($payment_id_to_return != 0) {
+                return $payment_id_to_return;
             }
         }
         
@@ -962,6 +1000,16 @@ class fattureincloud extends Module
             $this->writeLog("ERROR - Creazione conto di pagamento fallita: " . json_encode($create_payment_account_request));
         } else {
             $this->writeLog("INFO: Conto di pagamento creato: #" . $create_payment_account_request['data']['id']);
+            
+            $query = 'INSERT INTO `'._DB_PREFIX_.'fattureInCloud_payment_accounts`
+                (`payment_account_id`,`payment_account_name`)
+                VALUES (
+                '.$create_payment_account_request['data']['id'].',
+                "'.$payment_name.'"
+            );';
+            
+            Db::getInstance(_PS_USE_SQL_SLAVE_)->execute($query);
+                
             return $create_payment_account_request['data']['id'];
         }
     }
