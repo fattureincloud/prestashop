@@ -25,11 +25,8 @@ function upgrade_module_2_1_5($module) {
 		
 		Db::getInstance()->execute($sql_create_payment_accounts_table);
 		
-		mail("michele@websuvius.it", "qui", json_encode($sql_create_payment_accounts_table));
-		
 		return true;
 	} catch (Exception $e) {
-		mail("michele@websuvius.it", "eccezione", json_encode($e));
 		return false;
 	}
 	
