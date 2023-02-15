@@ -28,7 +28,7 @@ class fattureincloud extends Module
     {
         $this->name = 'fattureincloud';
         $this->tab = 'billing_invoicing';
-        $this->version = '2.1.5';
+        $this->version = '2.1.6';
         $this->author = 'FattureInCloud';
         $this->need_instance = 1;
 
@@ -1153,7 +1153,8 @@ class fattureincloud extends Module
         if (!isset($entity['id'])) {
             $client_found = false;
             
-            $check_client_by_code_filters = array(
+            $check_client_filters = array(
+                "fields" => "id,code,vat_number,tax_code",
                 "filter_type" => "or",
                 "filter" => array(
                     0 => array(
@@ -1164,52 +1165,58 @@ class fattureincloud extends Module
                 )
             );
             
-            $check_client_by_code_request = $fic_client->getClients($check_client_by_code_filters);
-            
-            if (isset($check_client_by_code_request['error'])) {
-                $this->writeLog("ERROR - Ricerca cliente per codice fallita: " . json_encode($check_client_by_code_request));
-            } elseif ($check_client_by_code_request['total'] == 1) {
-                $client_found = true;
-                
-                $entity['id'] = $check_client_by_code_request['data'][0]['id'];
-                $this->writeExtraAddressValues($billing_address_id, $entity['id']);
+            if (isset($entity['vat_number'])) {
+                $check_client_filters["filter"][] = array(
+                    "field" => "vat_number",
+                    "value" => $entity['vat_number'],
+                    "op" => "="
+                );
             }
             
-            if (!$client_found && (isset($entity['vat_number']) || isset($entity['tax_code']))) {
-                $check_client_filters = array(
-                    "filter_type" => "or",
-                    "filter" => array()
+            if (isset($entity['tax_code'])) {
+                $check_client_filters["filter"][] = array(
+                    "field" => "tax_code",
+                    "value" => $entity['tax_code'],
+                    "op" => "="
                 );
+            }
+            
+            $check_client_request = $fic_client->getClients($check_client_filters);
+            
+            if (isset($check_client_request['error'])) {
+                $this->writeLog("ERROR - Ricerca cliente fallita: " . json_encode($check_client_request));
+            } else {
                 
-                if (isset($entity['vat_number'])) {
-                    $check_client_filters["filter"][] = array(
-                        "field" => "vat_number",
-                        "value" => $entity['vat_number'],
-                        "op" => "="
-                    );
-                }
-                
-                if (isset($entity['tax_code'])) {
-                    $check_client_filters["filter"][] = array(
-                        "field" => "tax_code",
-                        "value" => $entity['tax_code'],
-                        "op" => "="
-                    );
-                }
-                
-                $check_client_request = $fic_client->getClients($check_client_filters);
-                
-                if (isset($check_client_request['error'])) {
-                    $this->writeLog("ERROR - Ricerca cliente fallita: " . json_encode($check_client_request));
-                } elseif ($check_client_request['total'] == 1) {
-                    $client_found = true;
+                foreach($check_client_request['data'] as $check_client) {
                     
-                    $entity['id'] = $check_client_request['data'][0]['id'];
-                    $this->writeExtraAddressValues($billing_address_id, $entity['id']);
+                    if ($check_client['code'] == $entity['code']) {
+                        
+                        $this->writeLog("INFO - Cliente trovato su FIC per codice: " . json_encode($check_client));
+                        
+                        $client_found = true;
+                        $entity['id'] = $check_client['id'];
+                        $this->writeExtraAddressValues($billing_address_id, $entity['id']);
+                        break;
+                    }
+                    
+                }
+                
+                foreach($check_client_request['data'] as $check_client) {
+                    
+                    if ($check_client['vat_number'] == $entity['vat_number']
+                        || $check_client['tax_code'] == $entity['tax_code']) {
+                        
+                        $this->writeLog("INFO - Cliente trovato su FIC per vat_number/tax_code: " . json_encode($check_client));
+                        
+                        $client_found = true;
+                        $entity['id'] = $check_client['id'];
+                        $this->writeExtraAddressValues($billing_address_id, $entity['id']);
+                        break;
+                    }
+                    
                 }
             }
         }
-        
         
         
         if ($client_found) {
@@ -1331,7 +1338,7 @@ class fattureincloud extends Module
                 'name' => 'Coupon utilizzati',
                 'description' => $coupon_description,
                 'qty' => count($used_coupons),
-                'grosss_price' => 0,
+                'gross_price' => 0,
                 'vat' => array('id' => 6)
             );
             
@@ -1543,16 +1550,6 @@ class fattureincloud extends Module
         $fic_client->setRefreshToken(Configuration::get('FATTUREINCLOUD_REFRESH_TOKEN'));
         
         $fic_client->setUserAgent("FattureInCloud/Prestashop/" . $this->version);
-        
-        $refresh_token_request = $fic_client->oauthRefreshToken();
-        
-        if (isset($refresh_token_request['access_token'])) {
-            Configuration::updateValue("FATTUREINCLOUD_ACCESS_TOKEN", $refresh_token_request['access_token']);
-            Configuration::updateValue("FATTUREINCLOUD_REFRESH_TOKEN", $refresh_token_request['refresh_token']);
-            
-            $fic_client->setAccessToken($refresh_token_request['access_token']);
-            $fic_client->setRefreshToken($refresh_token_request['refresh_token']);
-        }
         
         return $fic_client;
     }
