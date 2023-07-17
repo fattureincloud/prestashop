@@ -1123,7 +1123,7 @@ class fattureincloud extends Module
         $entity['code'] = 'PS-'. $customer_id . ' - '. $billing_address_id;
         
         if ($customer->email) {
-            $entity['mail'] = $customer->email;
+            $entity['email'] = $customer->email;
         }
         
         if ($billing_address->phone) {
