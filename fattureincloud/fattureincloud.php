@@ -1276,6 +1276,8 @@ class fattureincloud extends Module
                     
                     if ($document_type == "order" && Configuration::get('FATTUREINCLOUD_ORDERS_UPDATE_STORAGE')) {
                         $item['stock'] = true;
+                    } else if ($document_type != "order" && Configuration::get('FATTUREINCLOUD_ORDERS_CREATE') && Configuration::get('FATTUREINCLOUD_ORDERS_UPDATE_STORAGE')) {
+                        $item['stock'] = false;
                     }
                 }
             }
