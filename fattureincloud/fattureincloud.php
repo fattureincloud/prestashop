@@ -28,7 +28,7 @@ class fattureincloud extends Module
     {
         $this->name = 'fattureincloud';
         $this->tab = 'billing_invoicing';
-        $this->version = '2.1.7';
+        $this->version = '2.1.8';
         $this->author = 'FattureInCloud';
         $this->need_instance = 1;
 
@@ -652,7 +652,7 @@ class fattureincloud extends Module
                         
         $vat_list_request = $fic_client->getVatTypes();
         
-        if (isset($vat_list_request['error'])) {
+        if (!$vat_list_request || isset($vat_list_request['error'])) {
             $this->writeLog("ERROR - Lista IVA non recuperata: " . json_encode($vat_list_request));
         } else {
             $choices = array();
@@ -891,12 +891,29 @@ class fattureincloud extends Module
         } elseif ($id_tax!= null) {
             $fic_client = $this->initFattureInCloudClient();
             
+            
+            $vat_list_request = $fic_client->getVatTypes();
+            
+            if (isset($vat_list_request['error'])) {
+                $this->writeLog("ERROR - Lista IVA non recuperata: " . json_encode($vat_list_request));
+            } else {
+                
+                foreach ($vat_list_request['data'] as $vat) {
+                    
+                    if ($vat['value'] == $vat_rate) {
+                        $this->writeLog("INFO - Vat type recuperato: " . json_encode($vat));
+                        $this->writeExtraTaxValues($id_tax, $vat['id']);
+                        return $vat['id'];
+                    }
+                }
+            }
+            
             $vat_to_create = array("data" => array("value" => $vat_rate));
                         
             $new_vat_request = $fic_client->createVatType($vat_to_create);
             
             if (isset($new_vat_request['error'])) {
-                $this->writeLog("ERROR - Vat type non creato: " . json_encode($new_vat_request));
+                $this->writeLog("ERROR - Vat type non creato ( " . json_encode($vat_to_create). " ): " . json_encode($new_vat_request));
                 return null;
             } else {
                 $this->writeLog("INFO - Vat type creato: " . json_encode($new_vat_request));
