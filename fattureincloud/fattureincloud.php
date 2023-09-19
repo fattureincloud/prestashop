@@ -28,7 +28,7 @@ class fattureincloud extends Module
     {
         $this->name = 'fattureincloud';
         $this->tab = 'billing_invoicing';
-        $this->version = '2.1.8';
+        $this->version = '2.1.9';
         $this->author = 'FattureInCloud';
         $this->need_instance = 1;
 
@@ -1270,6 +1270,8 @@ class fattureincloud extends Module
         foreach ($products as $product) {
             
             $item = array();
+            
+            $item['stock'] = false;
             
             if (!empty($product['product_reference'])) {
                 $item['code'] = $product['product_reference'];
