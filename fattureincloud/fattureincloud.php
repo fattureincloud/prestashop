@@ -28,7 +28,7 @@ class fattureincloud extends Module
     {
         $this->name = 'fattureincloud';
         $this->tab = 'billing_invoicing';
-        $this->version = '2.1.9';
+        $this->version = '2.2.0';
         $this->author = 'FattureInCloud';
         $this->need_instance = 1;
 
@@ -1280,10 +1280,14 @@ class fattureincloud extends Module
             }
             
             if (!empty($item['code'])) {
-                $check_product_filters["filter"][] = array(
-                    "field" => "code",
-                    "value" => $item['code'],
-                    "op" => "="
+                $check_product_filters = array(
+                    "filter" => array(
+                        array(
+                            "field" => "code",
+                            "value" => $item['code'],
+                            "op" => "="
+                        )
+                    )
                 );
                 
                 $check_product_request = $fic_client->getProducts($check_product_filters);
@@ -1292,7 +1296,6 @@ class fattureincloud extends Module
                     $this->writeLog("ERROR - Ricerca prodotto fallita: " . json_encode($check_product_request));
                 } elseif ($check_product_request['total'] == 1) {
                     $item['product_id'] = $check_product_request['data'][0]['id'];
-                    
                     if ($document_type == "order" && Configuration::get('FATTUREINCLOUD_ORDERS_UPDATE_STORAGE')) {
                         $item['stock'] = true;
                     } else if ($document_type != "order" && Configuration::get('FATTUREINCLOUD_ORDERS_CREATE') && Configuration::get('FATTUREINCLOUD_ORDERS_UPDATE_STORAGE')) {
