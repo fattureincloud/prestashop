@@ -157,9 +157,9 @@ class FattureInCloudClient
         return $return;
     }
     
-    public function getPaymentAccounts()
+    public function getPaymentAccounts($params = null)
     {
-        $return = $this->makeCompanyRequest("settings/payment_accounts");
+        $return = $this->makeCompanyRequest("settings/payment_accounts", $params);
                 
         return $return;
     }

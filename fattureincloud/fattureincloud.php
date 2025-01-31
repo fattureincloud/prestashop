@@ -28,7 +28,7 @@ class fattureincloud extends Module
     {
         $this->name = 'fattureincloud';
         $this->tab = 'billing_invoicing';
-        $this->version = '2.2.0';
+        $this->version = '2.2.1';
         $this->author = 'FattureInCloud';
         $this->need_instance = 1;
 
@@ -973,7 +973,11 @@ class fattureincloud extends Module
             return $payment_details['payment_account_id'];
         }
         
-        $payment_accounts_request = $fic_client->getPaymentAccounts();
+        $payment_accounts_fieldset = array(
+            "fieldset" => "detailed"
+        );
+        
+        $payment_accounts_request = $fic_client->getPaymentAccounts($payment_accounts_fieldset);
         
         if (isset($payment_accounts_request['error'])) {
             $this->writeLog("ERROR - Ricerca conti di pagamento fallita: " . json_encode($payment_accounts_request));
@@ -985,6 +989,13 @@ class fattureincloud extends Module
             Db::getInstance(_PS_USE_SQL_SLAVE_)->execute($query);
                 
             $payment_id_to_return = 0;
+            $favorite_payment_id = 0;
+            
+            $this->writeLog("DEBUG - Payment accounts: " . json_encode($payment_accounts_request));
+            
+            if ($payment_accounts_request['data'][0] != null) {
+                $favorite_payment_id = $payment_accounts_request['data'][0]['id'];
+            }
             
             foreach ($payment_accounts_request['data'] as $payment_account) {
                 
@@ -997,12 +1008,17 @@ class fattureincloud extends Module
                 
                 Db::getInstance(_PS_USE_SQL_SLAVE_)->execute($query);
                 
-                if (strtolower($payment_account['name']) == strtolower($payment_name)) {
+                if (trim(strtolower($payment_account['name'])) == trim(strtolower($payment_name))) {
                     
                     $this->writeLog("INFO - Conto di pagamento trovato su FattureInCloud: " . json_encode($payment_account));
                     
                     $payment_id_to_return = $payment_account['id'];
                 }
+                
+                if ($payment_account['favorite'] == true) {
+                    $favorite_payment_id = $payment_account['id'];
+                }
+                
             }
             
             if ($payment_id_to_return != 0) {
@@ -1015,6 +1031,11 @@ class fattureincloud extends Module
         
         if (isset($create_payment_account_request['error'])) {
             $this->writeLog("ERROR - Creazione conto di pagamento fallita: " . json_encode($create_payment_account_request));
+            
+            if ($favorite_payment_id != 0) {
+                return $favorite_payment_id;
+            }
+            
         } else {
             $this->writeLog("INFO: Conto di pagamento creato: #" . $create_payment_account_request['data']['id']);
             
@@ -1404,6 +1425,8 @@ class fattureincloud extends Module
         
         if ($order_state->paid) {
             
+            $payment['status'] = "paid";
+            
             $paid_date_time = strtotime($order->invoice_date);
             
             if ($paid_date_time > 0) {
@@ -1412,8 +1435,11 @@ class fattureincloud extends Module
                 $payment['paid_date'] = date("Y-m-d");
             }
             
-            $payment['status'] = "paid";
-            $payment['payment_account'] = array("id" => $this->getPaymentAccountIDByName($order->payment));
+            $payment_account_id = $this->getPaymentAccountIDByName($order->payment);
+            
+            if ($payment_account_id != null) {
+                $payment['payment_account'] = array("id" => $payment_account_id);
+            }
        
         } else {
             $payment['status'] = "not_paid";
