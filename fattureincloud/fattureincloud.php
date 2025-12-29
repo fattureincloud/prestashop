@@ -101,7 +101,8 @@ class fattureincloud extends Module
             !Configuration::updateValue('FATTUREINCLOUD_INVOICES_SEND_TO_SDI', 0)||
             !Configuration::updateValue('FATTUREINCLOUD_INVOICES_SUFFIX', '')||
             !Configuration::updateValue('FATTUREINCLOUD_CUSTOMERS_UPDATE', 0)||
-            !Configuration::updateValue('FATTUREINCLOUD_RC_CENTER', '')
+            !Configuration::updateValue('FATTUREINCLOUD_RC_CENTER', '')||
+            !Configuration::updateValue('FATTUREINCLOUD_ERROR_EMAIL', '')
         ) {
             return false;
         }
@@ -223,6 +224,15 @@ class fattureincloud extends Module
             'desc' => 'Il centro di ricavo utilizzato per gli ordini e le fatture provenienti da questo negozio',
             'name' => 'FATTUREINCLOUD_RC_CENTER',
             'label' => 'Centro di ricavo',
+            'required' => false,
+        );
+        
+        $form_fields[] = array(
+            'col' => 3,
+            'type' => 'text',
+            'desc' => 'Email a cui inviare notifiche in caso di errori critici (es. limite documenti superato)',
+            'name' => 'FATTUREINCLOUD_ERROR_EMAIL',
+            'label' => 'Email notifiche errori',
             'required' => false,
         );
             
@@ -374,6 +384,7 @@ class fattureincloud extends Module
             'FATTUREINCLOUD_INVOICES_SUFFIX' => Configuration::get('FATTUREINCLOUD_INVOICES_SUFFIX'),
             'FATTUREINCLOUD_CUSTOMERS_UPDATE' => Configuration::get('FATTUREINCLOUD_CUSTOMERS_UPDATE'),
             'FATTUREINCLOUD_RC_CENTER' => Configuration::get('FATTUREINCLOUD_RC_CENTER'),
+            'FATTUREINCLOUD_ERROR_EMAIL' => Configuration::get('FATTUREINCLOUD_ERROR_EMAIL'),
         );
     }
     
@@ -727,6 +738,20 @@ class fattureincloud extends Module
                 
                 if (!$create_order_request || isset($create_order_request['error'])) {
                     $this->writeLog("ERROR - Ordine non creato: " . json_encode($create_order_request) . " - " . $fic_client->toJson() . " - " . json_encode($order_to_create));
+                    
+                    // Send notification for every error
+                    if (isset($create_order_request['error']['message'])) {
+                        $error_msg = $create_order_request['error']['message'];
+                        $this->sendErrorNotification(
+                            'ERRORE: Creazione Ordine FattureInCloud Fallita',
+                            $error_msg,
+                            array(
+                                'order_id' => $order_id,
+                                'order_reference' => $order->reference,
+                                'customer_name' => $order->getCustomer()->firstname . ' ' . $order->getCustomer()->lastname
+                            )
+                        );
+                    }
                 } else {
                     $number_to_save = $create_order_request['data']['number'];
                     
@@ -812,6 +837,20 @@ class fattureincloud extends Module
                 
                 if (!$create_invoice_request || isset($create_invoice_request['error'])) {
                     $this->writeLog("ERROR - Fattura non creata: " . json_encode($create_invoice_request) . " - " . $fic_client->toJson() . " - " . json_encode($invoice_to_create));
+                    
+                    // Send notification for every error
+                    if (isset($create_invoice_request['error']['message'])) {
+                        $error_msg = $create_invoice_request['error']['message'];
+                        $this->sendErrorNotification(
+                            'ERRORE: Creazione Fattura FattureInCloud Fallita',
+                            $error_msg,
+                            array(
+                                'order_id' => $order_id,
+                                'order_reference' => $order_complete->reference,
+                                'customer_name' => $order_complete->getCustomer()->firstname . ' ' . $order_complete->getCustomer()->lastname
+                            )
+                        );
+                    }
                 } else {
                     $number_to_save = $create_invoice_request['data']['number'];
                     
@@ -1602,6 +1641,64 @@ class fattureincloud extends Module
         $fic_client->setUserAgent("FattureInCloud/Prestashop/" . $this->version);
         
         return $fic_client;
+    }
+    
+    /**
+     * Send error notification email using Prestashop standards
+     */
+    protected function sendErrorNotification($subject, $error_message, $order_data = null)
+    {
+        $notification_email = Configuration::get('FATTUREINCLOUD_ERROR_EMAIL');
+        
+        if (empty($notification_email)) {
+            return false;
+        }
+        
+        // Also log in Prestashop system
+        PrestaShopLogger::addLog(
+            'FattureInCloud: ' . $subject . ' - ' . $error_message,
+            3, // Error level
+            null,
+            'Order',
+            $order_data ? $order_data['order_id'] : null,
+            true
+        );
+        
+        // Prepare email data
+        $template_vars = array(
+            '{subject}' => $subject,
+            '{error_message}' => $error_message,
+            '{order_id}' => $order_data ? $order_data['order_id'] : 'N/A',
+            '{order_reference}' => $order_data ? $order_data['order_reference'] : 'N/A',
+            '{customer_name}' => $order_data ? $order_data['customer_name'] : 'N/A',
+            '{date}' => date('d/m/Y H:i:s'),
+            '{shop_name}' => Configuration::get('PS_SHOP_NAME'),
+        );
+        
+        // Send email using Prestashop standard system
+        try {
+            Mail::Send(
+                (int)Configuration::get('PS_LANG_DEFAULT'),
+                'fattureincloud_error',
+                $subject,
+                $template_vars,
+                $notification_email,
+                null,
+                (string)Configuration::get('PS_SHOP_EMAIL'),
+                (string)Configuration::get('PS_SHOP_NAME'),
+                null,
+                null,
+                _PS_MODULE_DIR_ . 'fattureincloud/mails/',
+                false,
+                null
+            );
+            
+            $this->writeLog("INFO - Email di notifica errore inviata a: " . $notification_email);
+            return true;
+        } catch (Exception $e) {
+            $this->writeLog("ERROR - Impossibile inviare email di notifica: " . $e->getMessage());
+            return false;
+        }
     }
     
     /**
