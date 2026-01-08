@@ -28,7 +28,7 @@ class fattureincloud extends Module
     {
         $this->name = 'fattureincloud';
         $this->tab = 'billing_invoicing';
-        $this->version = '2.2.1';
+        $this->version = '2.2.2';
         $this->author = 'FattureInCloud';
         $this->need_instance = 1;
 
@@ -1353,7 +1353,7 @@ class fattureincloud extends Module
                     
                 $discount_item = array(
                     'name' => 'Sconto applicato',
-                    'qty' => 1,
+                    'qty' => $product['product_quantity'],
                     'gross_price' => - $product['reduction_amount_tax_incl'],
                     'vat' => $item['vat']
                 );
