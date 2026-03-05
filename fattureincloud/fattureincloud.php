@@ -782,7 +782,8 @@ class fattureincloud extends Module
         if (Configuration::get('FATTUREINCLOUD_INVOICES_CREATE')
             && $order_status->paid == true
             && ($order_complete->current_state == Configuration::get('PS_OS_PAYMENT')
-                || $order_complete->current_state == Configuration::get('PS_OS_WS_PAYMENT'))
+                || $order_complete->current_state == Configuration::get('PS_OS_WS_PAYMENT')
+                || $order_complete->current_state == Configuration::get('PS_OS_BANKWIRE'))
             ) {
             $this->writeLog("INFO - Creazione Fattura: " . $order_id);
             
@@ -857,7 +858,7 @@ class fattureincloud extends Module
             }
         }
     }
-    
+
     /**
      * Prepare invoice for creation
      */
