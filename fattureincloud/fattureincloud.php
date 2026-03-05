@@ -98,6 +98,7 @@ class fattureincloud extends Module
             !Configuration::updateValue('FATTUREINCLOUD_ORDERS_SUFFIX', '')||
             !Configuration::updateValue('FATTUREINCLOUD_ORDERS_UPDATE_STORAGE', 0)||
             !Configuration::updateValue('FATTUREINCLOUD_INVOICES_CREATE', 0)||
+            !Configuration::updateValue('FATTUREINCLOUD_INVOICES_AS_EINVOICE', 0)||
             !Configuration::updateValue('FATTUREINCLOUD_INVOICES_SEND_TO_SDI', 0)||
             !Configuration::updateValue('FATTUREINCLOUD_INVOICES_SUFFIX', '')||
             !Configuration::updateValue('FATTUREINCLOUD_CUSTOMERS_UPDATE', 0)||
@@ -294,6 +295,26 @@ class fattureincloud extends Module
                 ),
             ),
         );
+
+        $form_fields[] = array(
+            'type' => 'switch',
+            'label' => 'Crea fatture',
+            'name' => 'FATTUREINCLOUD_INVOICES_AS_EINVOICE',
+            'is_bool' => true,
+            'desc' => 'Se attivo, le fatture verranno create come fatture elettroniche.',
+            'values' => array(
+                array(
+                    'id' => 'active_on',
+                    'value' => true,
+                    'label' => 'Attivato'
+                ),
+                array(
+                    'id' => 'active_off',
+                    'value' => false,
+                    'label' => 'Disattivato'
+                ),
+            ),
+        );
             
         $form_fields[] = array(
             'type' => 'switch',
@@ -370,6 +391,7 @@ class fattureincloud extends Module
             'FATTUREINCLOUD_ORDERS_SUFFIX' => Configuration::get('FATTUREINCLOUD_ORDERS_SUFFIX'),
             'FATTUREINCLOUD_ORDERS_UPDATE_STORAGE' => Configuration::get('FATTUREINCLOUD_ORDERS_UPDATE_STORAGE'),
             'FATTUREINCLOUD_INVOICES_CREATE' => Configuration::get('FATTUREINCLOUD_INVOICES_CREATE'),
+            'FATTUREINCLOUD_INVOICES_AS_EINVOICE' => Configuration::get('FATTUREINCLOUD_INVOICES_AS_EINVOICE'),
             'FATTUREINCLOUD_INVOICES_SEND_TO_SDI' => Configuration::get('FATTUREINCLOUD_INVOICES_SEND_TO_SDI'),
             'FATTUREINCLOUD_INVOICES_SUFFIX' => Configuration::get('FATTUREINCLOUD_INVOICES_SUFFIX'),
             'FATTUREINCLOUD_CUSTOMERS_UPDATE' => Configuration::get('FATTUREINCLOUD_CUSTOMERS_UPDATE'),
@@ -1496,7 +1518,7 @@ class fattureincloud extends Module
                 $document['data']['numeration'] = Configuration::get('FATTUREINCLOUD_INVOICES_SUFFIX');
             }
             
-            if (Configuration::get('FATTUREINCLOUD_INVOICES_SEND_TO_SDI')) {
+            if (Configuration::get('FATTUREINCLOUD_INVOICES_AS_EINVOICE') || Configuration::get('FATTUREINCLOUD_INVOICES_SEND_TO_SDI')) {
                 $document['data']['e_invoice'] = true;
                 $document['data']['ei_data'] = $this->getEIPaymentCodeByModule($order->module);
             }
