@@ -1,7 +1,7 @@
 {*
 * FattureInCloud Prestashop Module
 *
-*  @author    Websuvius di Michele Matto <michele@websuvius.it>
+*  @author    Token S.a.s. di Matto Michele & C. <michele@webtoken.it>
 *  @copyright FattureInCloud - Madbit Entertainment S.r.l.
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *}
@@ -12,14 +12,14 @@
 <div class="panel">
 	<div class="row moduleconfig-header">
 		<div class="col-xs-12 text-center">
-			<img src="{$module_dir|escape:'html':'UTF-8'}views/img/logo-completo.png" />
+			<img src="{$module_dir|escape:'html':'UTF-8'}views/img/logo-completo-nuovo.png" />
 		</div>
 	</div>
 </div>
 	
 <div class="panel">
 	<div class="panel-heading text-center">
-		<i class="icon-cogs"></i> Connetti il tuo negozio <b>Prestashop</b> al tuo account <b>FattureInCloud - Passo 2</b>
+		<i class="icon-cogs"></i> Connetti il tuo negozio <b>Prestashop</b> al tuo account <b>Fatture In Cloud - Passo 2</b>
 	</div>
 	<div class="moduleconfig-content">
 		<div class="row">

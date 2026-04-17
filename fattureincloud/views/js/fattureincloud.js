@@ -1,7 +1,7 @@
 /**
 * FattureInCloud Prestashop Module
 *
-*  @author    Websuvius di Michele Matto <michele@websuvius.it>
+*  @author    Token S.a.s. di Matto Michele & C. <michele@webtoken.it>
 *  @copyright FattureInCloud - Madbit Entertainment S.r.l.
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 */
@@ -118,8 +118,49 @@ var fattureincloud = function() {
 		}
 	}
 	
+	var toggleEinvoice = function() {
+		
+		var createInvoices = $('input[name="FATTUREINCLOUD_INVOICES_CREATE"]:checked').val();
+		
+		if (createInvoices == '1') {
+			$('input[name="FATTUREINCLOUD_INVOICES_CREATE_AS_EINVOICE"]').prop('disabled', false);
+		} else {
+			$('input[name="FATTUREINCLOUD_INVOICES_CREATE_AS_EINVOICE"][value=""]').prop('checked', true);
+			$('input[name="FATTUREINCLOUD_INVOICES_CREATE_AS_EINVOICE"]').prop('disabled', true);
+		}
+		
+		var createEInvoices = $('input[name="FATTUREINCLOUD_INVOICES_CREATE_AS_EINVOICE"]:checked').val();
+		
+		if (createEInvoices == '1') {
+			$('input[name="FATTUREINCLOUD_INVOICES_SEND_TO_SDI"]').prop('disabled', false);
+		} else {
+			$('input[name="FATTUREINCLOUD_INVOICES_SEND_TO_SDI"][value=""]').prop('checked', true);
+			$('input[name="FATTUREINCLOUD_INVOICES_SEND_TO_SDI"]').prop('disabled', true);
+		}
+	}
+	
+	var initConfig = function() {
+		
+		try {
+			
+			toggleEinvoice();
+			
+			$('input[name="FATTUREINCLOUD_INVOICES_CREATE"]').on('change', function () {
+				toggleEinvoice();
+			});
+			
+			$('input[name="FATTUREINCLOUD_INVOICES_CREATE_AS_EINVOICE"]').on('change', function () {
+				toggleEinvoice();
+			});
+			
+		} catch(e) {
+			console.error(e);
+		}
+	}
+	
 	return {
 		initConnect: initConnect,
-		initSelectCompany: initSelectCompany
+		initSelectCompany: initSelectCompany,
+		initConfig: initConfig
 	}
 }();

@@ -8,7 +8,7 @@ Questo modulo è compatibile con versioni **uguali o superiori alla 1.7.6** di P
 
 | Versione fattureincloud/prestashop | Versione Prestashop richiesta |
 | ---------------------------------- | ----------------------------- |
-| 2.0.x, 2.1.x                       | 1.7.6 o superiore             |
+| 2.0.x, 2.1.x, 3.x                  | 1.7.6 o superiore             |
 
 ## Funzionalità
 
@@ -61,6 +61,8 @@ Ecco tutte le opzioni disponibili:
 **Scarica magazzino da ordine** (opzionale): attiva o disattiva lo scarico automatico dal magazzino di Fatture in Cloud per i prodotti presenti nell’ordine in arrivo dal negozio.
 
 **Crea fatture** (opzionale): attiva o disattiva la creazione delle fatture su Fatture in Cloud quando un ordine indicato come pagato sul negozio.
+
+**Crea fatture come elettroniche** (opzionale): attiva o disattiva la creazione delle fatture come elettroniche.
 
 **Invia fatture elettroniche** (opzionale): invia automaticamente al sistema di interscambio le fatture elettroniche.
 

@@ -2,7 +2,7 @@
 /**
 * FattureInCloud Prestashop Module
 *
-*  @author    Websuvius di Michele Matto <michele@websuvius.it>
+*  @author    Token S.a.s. di Matto Michele & C. <michele@webtoken.it>
 *  @copyright FattureInCloud - Madbit Entertainment S.r.l.
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 */
@@ -28,8 +28,8 @@ class fattureincloud extends Module
     {
         $this->name = 'fattureincloud';
         $this->tab = 'billing_invoicing';
-        $this->version = '2.2.2';
-        $this->author = 'FattureInCloud';
+        $this->version = '3.0.0';
+        $this->author = 'Fatture In Cloud';
         $this->need_instance = 1;
 
         $this->bootstrap = true;
@@ -37,9 +37,9 @@ class fattureincloud extends Module
         parent::__construct();
 
         $this->displayName = 'Fatture In Cloud';
-        $this->description = 'Collega il tuo negozio Prestashop al tuo account FattureInCloud! Sincronizza gli ordini, le anagrafiche ed emetti fatture!';
+        $this->description = 'Collega il tuo negozio Prestashop al tuo account Fatture In Cloud! Sincronizza gli ordini, le anagrafiche ed emetti fatture!';
 
-        $this->confirmUninstall = 'Sicuro di voler disinstallare il modulo FattureInCloud?';
+        $this->confirmUninstall = 'Sicuro di voler disinstallare il modulo Fatture In Cloud?';
 
         $this->ps_versions_compliancy = array('min' => '1.7.6.0', 'max' => _PS_VERSION_);
     }
@@ -98,10 +98,12 @@ class fattureincloud extends Module
             !Configuration::updateValue('FATTUREINCLOUD_ORDERS_SUFFIX', '')||
             !Configuration::updateValue('FATTUREINCLOUD_ORDERS_UPDATE_STORAGE', 0)||
             !Configuration::updateValue('FATTUREINCLOUD_INVOICES_CREATE', 0)||
+            !Configuration::updateValue('FATTUREINCLOUD_INVOICES_CREATE_AS_EINVOICE', 0)||
             !Configuration::updateValue('FATTUREINCLOUD_INVOICES_SEND_TO_SDI', 0)||
             !Configuration::updateValue('FATTUREINCLOUD_INVOICES_SUFFIX', '')||
             !Configuration::updateValue('FATTUREINCLOUD_CUSTOMERS_UPDATE', 0)||
-            !Configuration::updateValue('FATTUREINCLOUD_RC_CENTER', '')
+            !Configuration::updateValue('FATTUREINCLOUD_RC_CENTER', '')||
+            !Configuration::updateValue('FATTUREINCLOUD_ERROR_EMAIL', '')
         ) {
             return false;
         }
@@ -119,7 +121,7 @@ class fattureincloud extends Module
         $tab->class_name = 'AdminFattureincloud';
         $tab->name = array();
         foreach (Language::getLanguages(true) as $lang) {
-            $tab->name[$lang['id_lang']] = 'FattureInCloud';
+            $tab->name[$lang['id_lang']] = 'Fatture In Cloud';
         }
         $tab->id_parent = -1;
         $tab->module = $this->name;
@@ -151,7 +153,7 @@ class fattureincloud extends Module
         
         $this->context->smarty->assign('module_dir', $this->_path);
         
-        $admin_controller_link = $this->context->link->getAdminLink('AdminFattureincloud');
+        $admin_controller_link = $this->context->link->getAdminLink('AdminFattureincloud', true);
         Media::addJsDef(array('admin_controller_link' => $admin_controller_link));
         
         if (Configuration::get('FATTUREINCLOUD_ACCESS_TOKEN') == "" || Configuration::get('FATTUREINCLOUD_REFRESH_TOKEN') == "") {
@@ -213,7 +215,7 @@ class fattureincloud extends Module
      */
     protected function getConfigForm()
     {
-        $legend_title = 'Configura l\'integrazione FattureInCloud';
+        $legend_title = 'Configura l\'integrazione Fatture In Cloud';
                 
         $form_fields = array();
         
@@ -231,7 +233,7 @@ class fattureincloud extends Module
             'label' => 'Crea ordini',
             'name' => 'FATTUREINCLOUD_ORDERS_CREATE',
             'is_bool' => true,
-            'desc' => 'Quando arriva un nuovo ordine ne verrà creato uno su FattureInCloud',
+            'desc' => 'Quando arriva un nuovo ordine ne verrà creato uno su Fatture In Cloud',
             'values' => array(
                 array(
                     'id' => 'active_on',
@@ -280,7 +282,27 @@ class fattureincloud extends Module
             'label' => 'Crea fatture',
             'name' => 'FATTUREINCLOUD_INVOICES_CREATE',
             'is_bool' => true,
-            'desc' => 'Quando un ordine viene pagato verrà creata una fattura su FattureInCloud. Se disattivato Prestashop utilizzerà le funzionalità di fatturazione standard.',
+            'desc' => 'Quando un ordine viene pagato verrà creata una fattura su Fatture In Cloud. Se disattivato Prestashop utilizzerà le funzionalità di fatturazione standard.',
+            'values' => array(
+                array(
+                    'id' => 'active_on',
+                    'value' => true,
+                    'label' => 'Attivato'
+                ),
+                array(
+                    'id' => 'active_off',
+                    'value' => false,
+                    'label' => 'Disattivato'
+                ),
+            ),
+        );
+        
+        $form_fields[] = array(
+            'type' => 'switch',
+            'label' => 'Crea fatture come elettroniche',
+            'name' => 'FATTUREINCLOUD_INVOICES_CREATE_AS_EINVOICE',
+            'is_bool' => true,
+            'desc' => 'Se attivo, le fatture verranno create come fatture elettroniche.',
             'values' => array(
                 array(
                     'id' => 'active_on',
@@ -329,7 +351,7 @@ class fattureincloud extends Module
             'label' => 'Aggiorna anagrafica cliente',
             'name' => 'FATTUREINCLOUD_CUSTOMERS_UPDATE',
             'is_bool' => true,
-            'desc' => 'Se attivo aggiorna i dati del cliente modificando quelli presenti nell\'anagrafica FattureInCloud. Al contrario i dati saranno utilizzati solo sul documento.',
+            'desc' => 'Se attivo aggiorna i dati del cliente modificando quelli presenti nell\'anagrafica Fatture In Cloud. Al contrario i dati saranno utilizzati solo sul documento.',
             'values' => array(
                 array(
                     'id' => 'active_on',
@@ -343,7 +365,18 @@ class fattureincloud extends Module
                 ),
             ),
         );
-            
+        
+        $form_fields[] = array(
+            'col' => 3,
+            'type' => 'text',
+            'desc' => 'Email a cui inviare notifiche in caso di errori critici (es. limite documenti superato)',
+            'name' => 'FATTUREINCLOUD_ERROR_EMAIL',
+            'label' => 'Email notifiche errori',
+            'required' => false,
+            'class' => 'validate',
+            'autocomplete' => 'email',
+        );
+        
         $form = array(
             'form' => array(
                 'legend' => array(
@@ -370,10 +403,12 @@ class fattureincloud extends Module
             'FATTUREINCLOUD_ORDERS_SUFFIX' => Configuration::get('FATTUREINCLOUD_ORDERS_SUFFIX'),
             'FATTUREINCLOUD_ORDERS_UPDATE_STORAGE' => Configuration::get('FATTUREINCLOUD_ORDERS_UPDATE_STORAGE'),
             'FATTUREINCLOUD_INVOICES_CREATE' => Configuration::get('FATTUREINCLOUD_INVOICES_CREATE'),
+            'FATTUREINCLOUD_INVOICES_CREATE_AS_EINVOICE' => Configuration::get('FATTUREINCLOUD_INVOICES_CREATE_AS_EINVOICE'),
             'FATTUREINCLOUD_INVOICES_SEND_TO_SDI' => Configuration::get('FATTUREINCLOUD_INVOICES_SEND_TO_SDI'),
             'FATTUREINCLOUD_INVOICES_SUFFIX' => Configuration::get('FATTUREINCLOUD_INVOICES_SUFFIX'),
             'FATTUREINCLOUD_CUSTOMERS_UPDATE' => Configuration::get('FATTUREINCLOUD_CUSTOMERS_UPDATE'),
             'FATTUREINCLOUD_RC_CENTER' => Configuration::get('FATTUREINCLOUD_RC_CENTER'),
+            'FATTUREINCLOUD_ERROR_EMAIL' => Configuration::get('FATTUREINCLOUD_ERROR_EMAIL'),
         );
     }
     
@@ -382,10 +417,47 @@ class fattureincloud extends Module
      */
     protected function postProcess()
     {
-        $form_values = $this->getConfigFormValues();
-        
-        foreach (array_keys($form_values) as $key) {
-            Configuration::updateValue($key, Tools::getValue($key));
+        $formValues = $this->getConfigFormValues();
+        $errorEmail = trim((string) Tools::getValue('FATTUREINCLOUD_ERROR_EMAIL', ''));
+    
+        if ($errorEmail !== '' && !Validate::isEmail($errorEmail)) {
+            $this->errors[] = $this->l('L\'indirizzo email per le notifiche errori non è valido.');
+            return;
+        }
+    
+        $createInvoices = (int) Tools::getValue('FATTUREINCLOUD_INVOICES_CREATE', 0);
+        $createAsEinvoice = (int) Tools::getValue('FATTUREINCLOUD_INVOICES_CREATE_AS_EINVOICE', 0);
+        $sendToSdi = (int) Tools::getValue('FATTUREINCLOUD_INVOICES_SEND_TO_SDI', 0);
+    
+        if ($createInvoices !== 1) {
+            $createAsEinvoice = 0;
+            $sendToSdi = 0;
+        } elseif ($createAsEinvoice !== 1) {
+            $sendToSdi = 0;
+        }
+    
+        foreach (array_keys($formValues) as $key) {
+            $value = Tools::getValue($key);
+    
+            switch ($key) {
+                case 'FATTUREINCLOUD_ERROR_EMAIL':
+                    $value = $errorEmail;
+                    break;
+    
+                case 'FATTUREINCLOUD_INVOICES_CREATE':
+                    $value = $createInvoices;
+                    break;
+    
+                case 'FATTUREINCLOUD_INVOICES_CREATE_AS_EINVOICE':
+                    $value = $createAsEinvoice;
+                    break;
+    
+                case 'FATTUREINCLOUD_INVOICES_SEND_TO_SDI':
+                    $value = $sendToSdi;
+                    break;
+            }
+    
+            Configuration::updateValue($key, $value);
         }
     }
     
@@ -675,7 +747,7 @@ class fattureincloud extends Module
                         'fic_vat_id',
                         ChoiceType::class,
                         [
-                            'label' => 'Corrispondenza in FattureInCloud',
+                            'label' => 'Corrispondenza in Fatture In Cloud',
                             'required' => false,
                             'data' => $fic_vat_id_value,
                             'choices' => $choices
@@ -703,56 +775,118 @@ class fattureincloud extends Module
     }
     
     /**
+     * Acquire MySQL lock to avoid duplicate
+    */
+    public function acquireLock($lock_name)
+    {
+        $this->writeLog("INFO - Verifica Lock: " . $lock_name);
+        
+        $sql = 'SELECT GET_LOCK("' . pSQL($lock_name) . '", 10)';
+        $result = Db::getInstance()->getValue($sql);
+    
+        return ((int)$result === 1);
+    }
+    
+    /**
+     * Release MySQL lock.
+     */
+    public function releaseLock($lock_name)
+    {
+        $this->writeLog("INFO - Rilascia Lock: " . $lock_name);
+        
+        $sql = 'SELECT RELEASE_LOCK("' . pSQL($lock_name) . '")';
+        $result = Db::getInstance()->getValue($sql);
+    }
+    
+    /**
      * Create new order on FattureInCloud
      */
     public function hookActionValidateOrder($params)
     {
-        if (!$this->active) {
-            return;
-        }
-        
-        $order = $params['order'];
-        
-        if (Validate::isLoadedObject($order)) {
-            $order_id = (int)$order->id;
-        
-            if (Configuration::get('FATTUREINCLOUD_ORDERS_CREATE')) {
-                $this->writeLog("INFO - Creazione Ordine: " . $order_id);
+        try {
+            
+            if (!$this->active) {
+                return;
+            }
+            
+            $order = $params['order'];
+            
+            if (Validate::isLoadedObject($order)) {
                 
-                $order_to_create = $this->composeOrder($order_id);
-                
-                $fic_client = $this->initFattureInCloudClient();
-                
-                $create_order_request = $fic_client->createIssuedDocument($order_to_create);
-                
-                if (!$create_order_request || isset($create_order_request['error'])) {
-                    $this->writeLog("ERROR - Ordine non creato: " . json_encode($create_order_request) . " - " . $fic_client->toJson() . " - " . json_encode($order_to_create));
-                } else {
-                    $number_to_save = $create_order_request['data']['number'];
+                $order_id = (int)$order->id;
+            
+                if (Configuration::get('FATTUREINCLOUD_ORDERS_CREATE')) {
                     
-                    if ($create_order_request['data']['numeration'] != "") {
-                        $number_to_save .= $create_order_request['data']['numeration'];
+                    $this->writeLog("INFO - Creazione Ordine: " . $order_id);
+                    
+                    $lock = $this->acquireLock("fic_order_" . $order_id);
+                    
+                    if (!$lock) {
+                        $this->writeLog("INFO - Lock trovato - Creazione ordine già in corso: " . $order_id);
+                        return;
                     }
                     
-                    $number_to_save .= "/" . $create_order_request['data']['year'];
+                    try {
                     
-                    $query = 'INSERT INTO `'._DB_PREFIX_.'fattureInCloud`
-                        (`ps_order_id`,`fic_order_id`,`fic_order_number`,`fic_order_download_token`,`fic_order_download_url`)
-                        VALUES (
-                        '.$order_id.',
-                        '.$create_order_request['data']['id'].',
-                        "'.$number_to_save.'",
-                        "'.$create_order_request['data']['permanent_token'].'",
-                        "'.$create_order_request['data']['url'].'"
-                    );';
+                        $order_to_create = $this->composeOrder($order_id);
+                        
+                        $fic_client = $this->initFattureInCloudClient();
+                        
+                        $create_order_request = $fic_client->createIssuedDocument($order_to_create);
+                        
+                        if (!$create_order_request || isset($create_order_request['error'])) {
+                            $this->writeLog("ERROR - Ordine non creato: " . json_encode($create_order_request) . " - " . $fic_client->toJson() . " - " . json_encode($order_to_create));
+                            
+                            if (isset($create_order_request['error']['message'])) {
+                                $error_msg = $create_order_request['error']['message'];
+                                $this->sendErrorNotification(
+                                    'ERRORE: Creazione Ordine Fatture In Cloud Fallita',
+                                    $error_msg,
+                                    array(
+                                        'order_id' => $order_id,
+                                        'order_reference' => $order->reference,
+                                        'customer_name' => $order->getCustomer()->firstname . ' ' . $order->getCustomer()->lastname
+                                    )
+                                );
+                            }
+                            
+                        } else {
+                            $number_to_save = $create_order_request['data']['number'];
+                            
+                            if ($create_order_request['data']['numeration'] != "") {
+                                $number_to_save .= $create_order_request['data']['numeration'];
+                            }
+                            
+                            $number_to_save .= "/" . $create_order_request['data']['year'];
+                            
+                            $query = 'INSERT INTO `'._DB_PREFIX_.'fattureInCloud`
+                                (`ps_order_id`,`fic_order_id`,`fic_order_number`,`fic_order_download_token`,`fic_order_download_url`)
+                                VALUES (
+                                '.$order_id.',
+                                '.$create_order_request['data']['id'].',
+                                "'.$number_to_save.'",
+                                "'.$create_order_request['data']['permanent_token'].'",
+                                "'.$create_order_request['data']['url'].'"
+                            );';
+                            
+                            $this->writeLog("INFO - Ordine creato: #" . $number_to_save);
+                            
+                            if (Db::getInstance()->execute($query) == false) {
+                                return false;
+                            }
+                        }
                     
-                    $this->writeLog("INFO - Ordine creato: #" . $number_to_save);
-                    
-                    if (Db::getInstance()->execute($query) == false) {
-                        return false;
+                    } finally {
+                        $this->releaseLock("fic_order_" . $order_id);
                     }
                 }
             }
+        
+        } catch (\Throwable $e) {
+            $this->writeLog("ERROR - Eccezione nella creazione dell'ordine: " . $e->getMessage());
+            $this->writeLog("ERROR - File: " . $e->getFile());
+            $this->writeLog("ERROR - Riga: " . $e->getLine());
+            $this->writeLog("ERROR - Trace: " . $e->getTraceAsString());
         }
     }
     
@@ -771,90 +905,129 @@ class fattureincloud extends Module
      */
     public function hookActionOrderStatusPostUpdate($order)
     {
-        if (!$this->active) {
-            return;
-        }
+        try {
         
-        $order_status = $order['newOrderStatus'];
-        $order_id = $order['id_order'];
-        $order_complete = new Order($order_id);
-        
-        if (Configuration::get('FATTUREINCLOUD_INVOICES_CREATE')
-            && $order_status->paid == true
-            && ($order_complete->current_state == Configuration::get('PS_OS_PAYMENT')
-                || $order_complete->current_state == Configuration::get('PS_OS_WS_PAYMENT'))
-            ) {
-            $this->writeLog("INFO - Creazione Fattura: " . $order_id);
-            
-            $create_invoice = true;
-            
-            $fic_client = $this->initFattureInCloudClient();
-            
-            // Check if document already exists
-            $sql_invoice_check = 'SELECT * FROM  `'._DB_PREFIX_.'fattureInCloud` WHERE `ps_order_id` = '.$order_id.' AND fic_invoice_id IS NOT NULL';
-        
-            if ($row_invoice_check = Db::getInstance()->getRow($sql_invoice_check)) {
-                $get_document_detail_request = $fic_client->getIssuedDocumentDetails($row_invoice_check['fic_invoice_id']);
-                
-                if (isset($get_document_detail_request['error'])) {
-                    $sql_invoice_delete = 'DELETE FROM `'._DB_PREFIX_.'fattureInCloud` WHERE id_fattureInCloud = '.$row_invoice_check['id_fattureInCloud'].';';
-                    Db::getInstance()->execute($sql_invoice_delete);
-                } else {
-                    $create_invoice = false;
-                }
+            if (!$this->active) {
+                return;
             }
             
-            if ($create_invoice) {
+            $order_status = $order['newOrderStatus'];
+            $order_id = $order['id_order'];
+            $order_complete = new Order($order_id);
             
-                $invoice_to_create = $this->composeInvoice($order_id);
+            $this->writeLog("DEBUG - Cambio Stato - Creazione Fattura: " . $order_id . " - " . $order_status->paid . " - " . $order_complete->current_state);
+            
+            if (Configuration::get('FATTUREINCLOUD_INVOICES_CREATE')
+                && $order_status->paid == true
+                && ($order_complete->current_state == Configuration::get('PS_OS_PAYMENT')
+                    || $order_complete->current_state == Configuration::get('PS_OS_WS_PAYMENT'))
+                ) {
+                    
+                $this->writeLog("INFO - Creazione Fattura: " . $order_id);
                 
-                $create_invoice_request = $fic_client->createIssuedDocument($invoice_to_create);
+                $lock = $this->acquireLock("fic_invoice_" . $order_id);
                 
-                if (!$create_invoice_request || isset($create_invoice_request['error'])) {
-                    $this->writeLog("ERROR - Fattura non creata: " . json_encode($create_invoice_request) . " - " . $fic_client->toJson() . " - " . json_encode($invoice_to_create));
-                } else {
-                    $number_to_save = $create_invoice_request['data']['number'];
+                if (!$lock) {
+                    $this->writeLog("INFO - Lock trovato - Creazione fattura già in corso: " . $order_id);
+                    return;
+                }
+                
+                try {
                     
-                    if ($create_invoice_request['data']['numeration'] != "") {
-                        $number_to_save .= $create_invoice_request['data']['numeration'];
-                    }
+                    $create_invoice = true;
                     
-                    $number_to_save .= "/" . $create_invoice_request['data']['year'];
+                    $fic_client = $this->initFattureInCloudClient();
                     
-                    $query = 'INSERT INTO `'._DB_PREFIX_.'fattureInCloud`
-                        (`ps_order_id`,`fic_invoice_id`,`fic_invoice_number`,`fic_invoice_download_token`,`fic_invoice_download_url`)
-                        VALUES (
-                        '.$order_id.',
-                        '.$create_invoice_request['data']['id'].',
-                        "'.$number_to_save.'",
-                        "'.$create_invoice_request['data']['permanent_token'].'",
-                        "'.$create_invoice_request['data']['url'].'"
-                    );';
-                    
-                    Db::getInstance()->execute($query);
+                    // Check if document already exists
+                    $sql_invoice_check = 'SELECT * FROM  `'._DB_PREFIX_.'fattureInCloud` WHERE `ps_order_id` = '.$order_id.' AND fic_invoice_id IS NOT NULL';
+                
+                    if ($row_invoice_check = Db::getInstance()->getRow($sql_invoice_check)) {
+                        $get_document_detail_request = $fic_client->getIssuedDocumentDetails($row_invoice_check['fic_invoice_id']);
                         
-                    $this->writeLog("INFO - Fattura creata: #" . $number_to_save);
-                    
-                    if (Configuration::get('FATTUREINCLOUD_INVOICES_SEND_TO_SDI')) {
-                        $verify_einvoice_request = $fic_client->verifyEInvoiceXML($create_invoice_request['data']['id']);
-                        
-                        if (isset($verify_einvoice_request["error"])) {
-                            $this->writeLog("ERROR - Verifica XML fallita: " . json_encode($verify_einvoice_request));
+                        if (isset($get_document_detail_request['error'])) {
+                            $sql_invoice_delete = 'DELETE FROM `'._DB_PREFIX_.'fattureInCloud` WHERE id_fattureInCloud = '.$row_invoice_check['id_fattureInCloud'].';';
+                            Db::getInstance()->execute($sql_invoice_delete);
                         } else {
-                            $send_einvoice_request = $fic_client->sendEInvoice($create_invoice_request['data']['id']);
-                            
-                            if (isset($send_einvoice_request["error"])) {
-                                $this->writeLog("ERROR - Invio fattura elettronica fallito: " . json_encode($send_einvoice_request));
-                            }
+                            $create_invoice = false;
                         }
                     }
+                    
+                    if ($create_invoice) {
+                    
+                        $invoice_to_create = $this->composeInvoice($order_id);
+                        
+                        $create_invoice_request = $fic_client->createIssuedDocument($invoice_to_create);
+                        
+                        if (!$create_invoice_request || isset($create_invoice_request['error'])) {
+                            $this->writeLog("ERROR - Fattura non creata: " . json_encode($create_invoice_request) . " - " . $fic_client->toJson() . " - " . json_encode($invoice_to_create));
+                            
+                            if (isset($create_invoice_request['error']['message'])) {
+                                $error_msg = $create_invoice_request['error']['message'];
+                                $this->sendErrorNotification(
+                                    'ERRORE: Creazione Fattura Fatture In Cloud Fallita',
+                                    $error_msg,
+                                    array(
+                                        'order_id' => $order_id,
+                                        'order_reference' => $order_complete->reference,
+                                        'customer_name' => $order_complete->getCustomer()->firstname . ' ' . $order_complete->getCustomer()->lastname
+                                    )
+                                );
+                            }
+                            
+                        } else {
+                            $number_to_save = $create_invoice_request['data']['number'];
+                            
+                            if ($create_invoice_request['data']['numeration'] != "") {
+                                $number_to_save .= $create_invoice_request['data']['numeration'];
+                            }
+                            
+                            $number_to_save .= "/" . $create_invoice_request['data']['year'];
+                            
+                            $query = 'INSERT INTO `'._DB_PREFIX_.'fattureInCloud`
+                                (`ps_order_id`,`fic_invoice_id`,`fic_invoice_number`,`fic_invoice_download_token`,`fic_invoice_download_url`)
+                                VALUES (
+                                '.$order_id.',
+                                '.$create_invoice_request['data']['id'].',
+                                "'.$number_to_save.'",
+                                "'.$create_invoice_request['data']['permanent_token'].'",
+                                "'.$create_invoice_request['data']['url'].'"
+                            );';
+                            
+                            Db::getInstance()->execute($query);
+                                
+                            $this->writeLog("INFO - Fattura creata: #" . $number_to_save);
+                            
+                            if (Configuration::get('FATTUREINCLOUD_INVOICES_CREATE_AS_EINVOICE') && Configuration::get('FATTUREINCLOUD_INVOICES_SEND_TO_SDI')) {
+                                $verify_einvoice_request = $fic_client->verifyEInvoiceXML($create_invoice_request['data']['id']);
+                                
+                                if (isset($verify_einvoice_request["error"])) {
+                                    $this->writeLog("ERROR - Verifica XML fallita: " . json_encode($verify_einvoice_request));
+                                } else {
+                                    $send_einvoice_request = $fic_client->sendEInvoice($create_invoice_request['data']['id']);
+                                    
+                                    if (isset($send_einvoice_request["error"])) {
+                                        $this->writeLog("ERROR - Invio fattura elettronica fallito: " . json_encode($send_einvoice_request));
+                                    }
+                                }
+                            }
+                        }
+                        
+                    } else {
+                        
+                        $this->writeLog("INFO - Creazione fattura interrotta: Già esiste una fattura per questo ordine: " . json_encode($get_document_detail_request));
+                        
+                    }
+                    
+                } finally {
+                    $this->releaseLock("fic_invoice_" . $order_id);
                 }
-                
-            } else {
-                
-                $this->writeLog("INFO - Creazione fattura interrotta: Già esiste una fattura per questo ordine: " . json_encode($get_document_detail_request));
-                
             }
+        
+        } catch (\Throwable $e) {
+            $this->writeLog("ERROR - Eccezione nella creazione della fattura: " . $e->getMessage());
+            $this->writeLog("ERROR - File: " . $e->getFile());
+            $this->writeLog("ERROR - Riga: " . $e->getLine());
+            $this->writeLog("ERROR - Trace: " . $e->getTraceAsString());
         }
     }
     
@@ -966,7 +1139,7 @@ class fattureincloud extends Module
             
         $payment_details =  Db::getInstance(_PS_USE_SQL_SLAVE_)->getRow($query);
         
-        if ($payment_details['payment_account_id'] != null) {
+        if (is_array($payment_details) && isset($payment_details['payment_account_id']) && $payment_details['payment_account_id'] !== null) {
             
             $this->writeLog("INFO - Conto di pagamento già presente nel DB : " . json_encode($payment_details));
             
@@ -1010,7 +1183,7 @@ class fattureincloud extends Module
                 
                 if (trim(strtolower($payment_account['name'])) == trim(strtolower($payment_name))) {
                     
-                    $this->writeLog("INFO - Conto di pagamento trovato su FattureInCloud: " . json_encode($payment_account));
+                    $this->writeLog("INFO - Conto di pagamento trovato su Fatture In Cloud: " . json_encode($payment_account));
                     
                     $payment_id_to_return = $payment_account['id'];
                 }
@@ -1496,7 +1669,7 @@ class fattureincloud extends Module
                 $document['data']['numeration'] = Configuration::get('FATTUREINCLOUD_INVOICES_SUFFIX');
             }
             
-            if (Configuration::get('FATTUREINCLOUD_INVOICES_SEND_TO_SDI')) {
+            if (Configuration::get('FATTUREINCLOUD_INVOICES_CREATE_AS_EINVOICE')) {
                 $document['data']['e_invoice'] = true;
                 $document['data']['ei_data'] = $this->getEIPaymentCodeByModule($order->module);
             }
@@ -1631,5 +1804,63 @@ class fattureincloud extends Module
         
         $log_line = "[" . date("Y/m/d h:i:s", time()) . "] [v" . $this->version . "] " . $line . "\n";
         file_put_contents($current_log_file, $log_line, FILE_APPEND);
+    }
+    
+    /**
+     * Send error notification email using Prestashop standards
+     */
+    protected function sendErrorNotification($subject, $error_message, $order_data = null)
+    {
+        $notification_email = Configuration::get('FATTUREINCLOUD_ERROR_EMAIL');
+    
+        if (empty($notification_email)) {
+            return false;
+        }
+    
+        // Also log in Prestashop system
+        PrestaShopLogger::addLog(
+            'FattureInCloud: ' . $subject . ' - ' . $error_message,
+            3, // Error level
+            null,
+            'Order',
+            $order_data ? $order_data['order_id'] : null,
+            true
+        );
+    
+        // Prepare email data
+        $template_vars = array(
+            '{subject}' => $subject,
+            '{error_message}' => $error_message,
+            '{order_id}' => $order_data ? $order_data['order_id'] : 'N/A',
+            '{order_reference}' => $order_data ? $order_data['order_reference'] : 'N/A',
+            '{customer_name}' => $order_data ? $order_data['customer_name'] : 'N/A',
+            '{date}' => date('d/m/Y H:i:s'),
+            '{shop_name}' => Configuration::get('PS_SHOP_NAME'),
+        );
+    
+        // Send email using Prestashop standard system
+        try {
+            Mail::Send(
+                (int)Configuration::get('PS_LANG_DEFAULT'),
+                'fattureincloud_error',
+                $subject,
+                $template_vars,
+                $notification_email,
+                null,
+                (string)Configuration::get('PS_SHOP_EMAIL'),
+                (string)Configuration::get('PS_SHOP_NAME'),
+                null,
+                null,
+                _PS_MODULE_DIR_ . 'fattureincloud/mails/',
+                false,
+                null
+            );
+    
+            $this->writeLog("INFO - Email di notifica errore inviata a: " . $notification_email);
+            return true;
+        } catch (Exception $e) {
+            $this->writeLog("ERROR - Impossibile inviare email di notifica: " . $e->getMessage());
+            return false;
+        }
     }
 }

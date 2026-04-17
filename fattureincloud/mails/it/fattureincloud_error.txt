@@ -1,0 +1,24 @@
+*** ERRORE CRITICO FATTUREINCLOUD ***
+
+Si è verificato un errore critico durante la sincronizzazione con FattureInCloud.
+
+MESSAGGIO DI ERRORE:
+{error_message}
+
+DETTAGLI ORDINE:
+- ID Ordine: {order_id}
+- Riferimento: {order_reference}
+- Cliente: {customer_name}
+- Data/Ora: {date}
+- Negozio: {shop_name}
+
+AZIONE RICHIESTA:
+Questo errore richiede un intervento immediato:
+- Verificare lo stato della licenza FattureInCloud
+- Controllare eventuali limiti raggiunti
+- Creare manualmente il documento su FattureInCloud
+- Verificare i log del modulo per ulteriori dettagli
+
+---
+Questo è un messaggio automatico del sistema FattureInCloud per Prestashop.
+© {shop_name}
