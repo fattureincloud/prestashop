@@ -1747,14 +1747,19 @@ class fattureincloud extends Module
                 
                 $pdf_filename = $this->prepareFileName("Fattura-" . $invoice_to_display['fic_invoice_number'] . '-' . $customer_name) . '.pdf';
                 
-                file_put_contents($pdf_filename, file_get_contents($pdf_url));
+                // Stream the PDF directly: saving it to disk left customer invoices in the shop root, publicly downloadable
+                $pdf_content = file_get_contents($pdf_url);
+                
+                if ($pdf_content === false || $pdf_content === '') {
+                    die(Tools::displayError('Unable to download the invoice.'));
+                }
                 
                 header('Content-Description: File Transfer');
                 header('Content-Type: application/pdf');
-                header('Content-Length: ' . filesize($pdf_filename));
-                header('Content-Disposition: attachment; filename=' . basename($pdf_filename));
+                header('Content-Length: ' . strlen($pdf_content));
+                header('Content-Disposition: attachment; filename="' . $pdf_filename . '"');
                 
-                readfile($pdf_filename);
+                echo $pdf_content;
                 
                 exit();
             }
