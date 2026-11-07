@@ -1369,7 +1369,9 @@ class fattureincloud extends Module
             $entity['vat_number'] = $billing_address->vat_number;
         }
     
-        $entity['code'] = 'PS-'. $customer_id . ' - '. $billing_address_id;
+        if ($this->isCustomerManagementEnabled()) {
+            $entity['code'] = 'PS-'. $customer_id . ' - '. $billing_address_id;
+        }
         
         if ($customer->email) {
             $entity['email'] = $customer->email;
@@ -1452,9 +1454,16 @@ class fattureincloud extends Module
                     }
                 
                     foreach($check_client_request['data'] as $check_client) {
-                    
-                        if ($check_client['vat_number'] == $entity['vat_number']
-                            || $check_client['tax_code'] == $entity['tax_code']) {
+
+                        $vat_match = isset($entity['vat_number'])
+                            && !empty($check_client['vat_number'])
+                            && $check_client['vat_number'] === $entity['vat_number'];
+
+                        $tax_code_match = isset($entity['tax_code'])
+                            && !empty($check_client['tax_code'])
+                            && $check_client['tax_code'] === $entity['tax_code'];
+
+                        if (!$client_found && ($vat_match || $tax_code_match)) {
                         
                             $this->writeLog("INFO - Cliente trovato su FIC per vat_number/tax_code: " . json_encode($check_client));
                         
