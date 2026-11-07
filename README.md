@@ -12,40 +12,43 @@ Questo modulo è compatibile con versioni **uguali o superiori alla 1.7.6** di P
 
 ## Funzionalità
 
-- Creazione automatica degli ordini
-- Scarico automatico prodotti dal magazzino
-- Creazione automatica delle fatture
-- Invio delle fatture al sistema di interscambio
-- Aggiornamento automatico delle anagrafiche cliente su Fatture in Cloud
-- Aggiunta dei campi Email PEC e Codice SDI alle anagrafiche dei clienti
-- Associazione aliquote IVA tra Prestashop e Fatture in Cloud
+* Creazione automatica degli ordini
+* Scarico automatico prodotti dal magazzino
+* Creazione automatica delle fatture
+* Invio delle fatture al sistema di interscambio
+* Aggiornamento automatico delle anagrafiche cliente su Fatture in Cloud
+* Aggiunta dei campi Email PEC e Codice SDI alle anagrafiche dei clienti
+* Associazione aliquote IVA tra Prestashop e Fatture in Cloud
+
 
 ## Installazione
 
 L’installazione del modulo è molto semplice! Segui i seguenti passi:
 
-- Scarica il file ZIP dalla [pagina delle release](https://github.com/fattureincloud/prestashop/releases/)
-- Vai nella sezione _Gestione Moduli_ del pannello di amministrazione del tuo negozio Prestashop
-- Clicca su _Carica un modulo_ in alto a destra
-- Trascina il file ZIP scaricato in precedenza nella finestra di caricamento
-- Attendi che il modulo sia installato. Ora puoi connettere il tuo account di Fatture in Cloud.
+* Scarica il file ZIP dalla [pagina delle release](https://github.com/fattureincloud/prestashop/releases/)
+* Vai nella sezione *Gestione Moduli* del pannello di amministrazione del tuo negozio Prestashop
+* Clicca su *Carica un modulo* in alto a destra
+* Trascina il file ZIP scaricato in precedenza nella finestra di caricamento
+* Attendi che il modulo sia installato. Ora puoi connettere il tuo account di Fatture in Cloud.
+
 
 ## Connessione
 
 Una volta che il modulo è installato devi connetterlo al tuo account di Fatture in Cloud. Più seguire le istruzioni mostrate a schermo oppure queste istruzioni:
 
-- Accedi alla configurazione del modulo (se lo hai appena installato clicca su _Configura_ al termine dell’installazione)
-- Nel primo passo della configurazione ti verrà fornito un codice, ricopialo e apri l’url [https://secure.fattureincloud.it/connetti](https://secure.fattureincloud.it/connetti) (in una nuova finestra / tab del tuo browser)
-- Incolla il codice che hai copiato nel punto precedente e clicca su _Continua_
-- Conferma il processo cliccando su _Autorizza_ (eventualmente puoi selezionare l’azienda a cui il modulo avrà accesso)
-- Torna sul tuo negozio e ti verrà mostrato l’elenco delle aziende collegate al tuo account. Scegli quella che vuoi connettere (e che hai autorizzato nel punto precedente).
-- Il tuo account è collegato! Ora puoi configurare il modulo.
+* Accedi alla configurazione del modulo (se lo hai appena installato clicca su *Configura* al termine dell’installazione)
+* Nel primo passo della configurazione ti verrà fornito un codice, ricopialo e apri l’url [https://secure.fattureincloud.it/connetti](https://secure.fattureincloud.it/connetti) (in una nuova finestra / tab del tuo browser)
+* Incolla il codice che hai copiato nel punto precedente e clicca su *Continua*
+* Conferma il processo cliccando su *Autorizza* (eventualmente puoi selezionare l’azienda a cui il modulo avrà accesso)
+* Torna sul tuo negozio e ti verrà mostrato l’elenco delle aziende collegate al tuo account. Scegli quella che vuoi connettere (e che hai autorizzato nel punto precedente).
+* Il tuo account è collegato! Ora puoi configurare il modulo.
+
 
 ## Configurazione
 
 ### Configurazione principale
 
-Una volta connesso il tuo account di Fatture in Cloud puoi configurare le varie opzioni disponibili cliccando sul tasto _Configura_ corrispondente al modulo nella sezione _Gestione Moduli_ del pannello di amministrazione del tuo negozio.
+Una volta connesso il tuo account di Fatture in Cloud puoi configurare le varie opzioni disponibili cliccando sul tasto *Configura* corrispondente al modulo nella sezione *Gestione Moduli* del pannello di amministrazione del tuo negozio.
 
 Ecco tutte le opzioni disponibili:
 
@@ -65,25 +68,27 @@ Ecco tutte le opzioni disponibili:
 
 **Sezionale fatture** (opzionale): la numerazione/sezionale che vuoi utilizzare per le fatture emesse per gli ordini provenienti dal negozio.
 
-**Gestisci anagrafica cliente** (opzionale, attiva di default): se attivo il modulo cerca, crea e aggiorna le anagrafiche cliente su Fatture in Cloud e le associa alla fattura. Se disattivo i clienti vengono ignorati: il documento viene emesso senza associazione al cliente e i suoi dati vengono utilizzati solo sul documento. In questo caso l'opzione _Aggiorna anagrafica cliente_ non ha effetto.
+**Gestisci anagrafica cliente** (opzionale, attiva di default): se attivo il modulo cerca, crea e aggiorna le anagrafiche cliente su Fatture in Cloud e le associa alla fattura. Se disattivo i clienti vengono ignorati: il documento viene emesso senza associazione al cliente e i suoi dati vengono utilizzati solo sul documento. In questo caso l'opzione *Aggiorna anagrafica cliente* non ha effetto.
 
-**Aggiorna anagrafica cliente** (opzionale): aggiorna in automatico le anagrafiche cliente presenti su Fatture in Cloud con i dati del cliente in arrivo dal negozio. _N.B.: se non vuoi che i dati del cliente presenti su Fatture in Cloud siano sovrascritti da quelli presenti su Prestashop, non attivare questa opzione._
+**Aggiorna anagrafica cliente** (opzionale): aggiorna in automatico le anagrafiche cliente presenti su Fatture in Cloud con i dati del cliente in arrivo dal negozio. *N.B.: se non vuoi che i dati del cliente presenti su Fatture in Cloud siano sovrascritti da quelli presenti su Prestashop, non attivare questa opzione.*
 
-Ricordati di cliccare su _Salva configurazioni_ quando hai impostato tutte le opzioni.
+Ricordati di cliccare su *Salva configurazioni* quando hai impostato tutte le opzioni.
 
 ### Configurazione Aliquote IVA
 
 Di base il modulo utilizza già le aliquote IVA standard di FattureInCloud. Se vuoi personalizzarle, modificarle o utilizzare aliquote IVA particolari segui queste istruzioni:
 
-- Assicurati che l’aliquota IVA sia creata sia su Fatture in Cloud che sul negozio
-- Nel pannello di amministrazione del tuo negozio vai su _Internazionale > Tasse_
-- Individua l’aliquota IVA che vuoi collegare a Fatture in Cloud ed accedi alla sua modifica
-- Utilizza il campo *Corrispondenza in *FattureInCloud\* per selezionare l’aliquota corrispondente
-- Clicca su _Salva_ per confermare la scelta.
+* Assicurati che l’aliquota IVA sia creata sia su Fatture in Cloud che sul negozio
+* Nel pannello di amministrazione del tuo negozio vai su *Internazionale > Tasse*
+* Individua l’aliquota IVA che vuoi collegare a Fatture in Cloud ed accedi alla sua modifica
+* Utilizza il campo *Corrispondenza in *FattureInCloud* per selezionare l’aliquota corrispondente
+* Clicca su *Salva* per confermare la scelta.
+
 
 ## Supporto
 
 Se hai bisogno di assistenza o hai richieste riguardo questo modulo contatta Fatture in Cloud tramite la chat di supporto presente sulla piattaforma.
+
 
 ## Feature request e bug report
 
