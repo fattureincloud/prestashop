@@ -101,6 +101,7 @@ class fattureincloud extends Module
             !Configuration::updateValue('FATTUREINCLOUD_INVOICES_CREATE_AS_EINVOICE', 0)||
             !Configuration::updateValue('FATTUREINCLOUD_INVOICES_SEND_TO_SDI', 0)||
             !Configuration::updateValue('FATTUREINCLOUD_INVOICES_SUFFIX', '')||
+            !Configuration::updateValue('FATTUREINCLOUD_CUSTOMERS_MANAGE', 1)||
             !Configuration::updateValue('FATTUREINCLOUD_CUSTOMERS_UPDATE', 0)||
             !Configuration::updateValue('FATTUREINCLOUD_RC_CENTER', '')||
             !Configuration::updateValue('FATTUREINCLOUD_ERROR_EMAIL', '')
@@ -348,6 +349,26 @@ class fattureincloud extends Module
                         
         $form_fields[] = array(
             'type' => 'switch',
+            'label' => 'Gestisci anagrafica cliente',
+            'name' => 'FATTUREINCLOUD_CUSTOMERS_MANAGE',
+            'is_bool' => true,
+            'desc' => 'Se attivo il modulo cerca, crea e aggiorna il cliente su Fatture In Cloud e lo associa alla fattura. Se disattivo i clienti vengono ignorati: il documento viene emesso senza associazione al cliente e i suoi dati vengono utilizzati solo sul documento. Con l\'opzione disattivata "Aggiorna anagrafica cliente" non ha effetto.',
+            'values' => array(
+                array(
+                    'id' => 'active_on',
+                    'value' => true,
+                    'label' => 'Attivato',
+                ),
+                array(
+                    'id' => 'active_off',
+                    'value' => false,
+                    'label' => 'Disattivato',
+                ),
+            ),
+        );
+
+        $form_fields[] = array(
+            'type' => 'switch',
             'label' => 'Aggiorna anagrafica cliente',
             'name' => 'FATTUREINCLOUD_CUSTOMERS_UPDATE',
             'is_bool' => true,
@@ -396,6 +417,22 @@ class fattureincloud extends Module
     /**
      * Set values for the inputs of configuration form
      */
+    /**
+     * Whether the module manages customers on Fatture In Cloud.
+     * Missing key (installations before this option existed) means enabled.
+     */
+    protected function isCustomerManagementEnabled()
+    {
+        if (!Configuration::hasKey('FATTUREINCLOUD_CUSTOMERS_MANAGE')) {
+            return true;
+        }
+
+        return (bool) Configuration::get('FATTUREINCLOUD_CUSTOMERS_MANAGE');
+    }
+
+    /**
+     * Set values for the inputs of configuration form
+     */
     protected function getConfigFormValues()
     {
         return array(
@@ -406,6 +443,7 @@ class fattureincloud extends Module
             'FATTUREINCLOUD_INVOICES_CREATE_AS_EINVOICE' => Configuration::get('FATTUREINCLOUD_INVOICES_CREATE_AS_EINVOICE'),
             'FATTUREINCLOUD_INVOICES_SEND_TO_SDI' => Configuration::get('FATTUREINCLOUD_INVOICES_SEND_TO_SDI'),
             'FATTUREINCLOUD_INVOICES_SUFFIX' => Configuration::get('FATTUREINCLOUD_INVOICES_SUFFIX'),
+            'FATTUREINCLOUD_CUSTOMERS_MANAGE' => $this->isCustomerManagementEnabled(),
             'FATTUREINCLOUD_CUSTOMERS_UPDATE' => Configuration::get('FATTUREINCLOUD_CUSTOMERS_UPDATE'),
             'FATTUREINCLOUD_RC_CENTER' => Configuration::get('FATTUREINCLOUD_RC_CENTER'),
             'FATTUREINCLOUD_ERROR_EMAIL' => Configuration::get('FATTUREINCLOUD_ERROR_EMAIL'),
@@ -1331,7 +1369,9 @@ class fattureincloud extends Module
             $entity['vat_number'] = $billing_address->vat_number;
         }
     
-        $entity['code'] = 'PS-'. $customer_id . ' - '. $billing_address_id;
+        if ($this->isCustomerManagementEnabled()) {
+            $entity['code'] = 'PS-'. $customer_id . ' - '. $billing_address_id;
+        }
         
         if ($customer->email) {
             $entity['email'] = $customer->email;
@@ -1339,12 +1379,6 @@ class fattureincloud extends Module
         
         if ($billing_address->phone) {
             $entity['phone'] = $billing_address->phone;
-        }
-        
-        $fic_address_fields = $this->readExtraAddressValues($billing_address_id);
-        
-        if (isset($fic_address_fields['fic_client_id'])) {
-            $entity['id'] = $fic_address_fields['fic_client_id'];
         }
         
         $fic_customer_fields = $this->readExtraCustomerValues($customer_id);
@@ -1359,100 +1393,115 @@ class fattureincloud extends Module
             
         $fic_client = $this->initFattureInCloudClient();
         
-        $client_found = true;
-        
-        if (!isset($entity['id'])) {
-            $client_found = false;
+        if ($this->isCustomerManagementEnabled()) {
+            $fic_address_fields = $this->readExtraAddressValues($billing_address_id);
             
-            $check_client_filters = array(
-                "fields" => "id,code,vat_number,tax_code",
-                "filter_type" => "or",
-                "filter" => array(
-                    0 => array(
-                        "field" => "code",
-                        "value" => $entity['code'],
-                        "op" => "="
+            if (isset($fic_address_fields['fic_client_id'])) {
+                $entity['id'] = $fic_address_fields['fic_client_id'];
+            }
+            
+            $client_found = true;
+        
+            if (!isset($entity['id'])) {
+                $client_found = false;
+            
+                $check_client_filters = array(
+                    "fields" => "id,code,vat_number,tax_code",
+                    "filter_type" => "or",
+                    "filter" => array(
+                        0 => array(
+                            "field" => "code",
+                            "value" => $entity['code'],
+                            "op" => "="
+                        )
                     )
-                )
-            );
-            
-            if (isset($entity['vat_number'])) {
-                $check_client_filters["filter"][] = array(
-                    "field" => "vat_number",
-                    "value" => $entity['vat_number'],
-                    "op" => "="
                 );
-            }
             
-            if (isset($entity['tax_code'])) {
-                $check_client_filters["filter"][] = array(
-                    "field" => "tax_code",
-                    "value" => $entity['tax_code'],
-                    "op" => "="
-                );
-            }
-            
-            $check_client_request = $fic_client->getClients($check_client_filters);
-            
-            if (isset($check_client_request['error'])) {
-                $this->writeLog("ERROR - Ricerca cliente fallita: " . json_encode($check_client_request));
-            } else {
-                
-                foreach($check_client_request['data'] as $check_client) {
-                    
-                    if ($check_client['code'] == $entity['code']) {
-                        
-                        $this->writeLog("INFO - Cliente trovato su FIC per codice: " . json_encode($check_client));
-                        
-                        $client_found = true;
-                        $entity['id'] = $check_client['id'];
-                        $this->writeExtraAddressValues($billing_address_id, $entity['id']);
-                        break;
-                    }
-                    
+                if (isset($entity['vat_number'])) {
+                    $check_client_filters["filter"][] = array(
+                        "field" => "vat_number",
+                        "value" => $entity['vat_number'],
+                        "op" => "="
+                    );
                 }
-                
-                foreach($check_client_request['data'] as $check_client) {
-                    
-                    if ($check_client['vat_number'] == $entity['vat_number']
-                        || $check_client['tax_code'] == $entity['tax_code']) {
-                        
-                        $this->writeLog("INFO - Cliente trovato su FIC per vat_number/tax_code: " . json_encode($check_client));
-                        
-                        $client_found = true;
-                        $entity['id'] = $check_client['id'];
-                        $this->writeExtraAddressValues($billing_address_id, $entity['id']);
-                        break;
-                    }
-                    
+            
+                if (isset($entity['tax_code'])) {
+                    $check_client_filters["filter"][] = array(
+                        "field" => "tax_code",
+                        "value" => $entity['tax_code'],
+                        "op" => "="
+                    );
                 }
-            }
-        }
-        
-        
-        if ($client_found) {
-            if (Configuration::get('FATTUREINCLOUD_CUSTOMERS_UPDATE')) {
-                $entity_to_edit = array("data" => $entity);
-                
-                $edit_client_request = $fic_client->editClient($entity_to_edit);
-                
-                if (isset($edit_client_request['error'])) {
-                    $this->writeLog("ERROR - Aggiornamento cliente fallito: " . json_encode($edit_client_request));
+            
+                $check_client_request = $fic_client->getClients($check_client_filters);
+            
+                if (isset($check_client_request['error'])) {
+                    $this->writeLog("ERROR - Ricerca cliente fallita: " . json_encode($check_client_request));
                 } else {
-                    $this->writeLog("INFO - Cliente aggiornato: " . json_encode($edit_client_request));
+                
+                    foreach($check_client_request['data'] as $check_client) {
+                    
+                        if ($check_client['code'] == $entity['code']) {
+                        
+                            $this->writeLog("INFO - Cliente trovato su FIC per codice: " . json_encode($check_client));
+                        
+                            $client_found = true;
+                            $entity['id'] = $check_client['id'];
+                            $this->writeExtraAddressValues($billing_address_id, $entity['id']);
+                            break;
+                        }
+                    
+                    }
+                
+                    foreach($check_client_request['data'] as $check_client) {
+
+                        $vat_match = isset($entity['vat_number'])
+                            && !empty($check_client['vat_number'])
+                            && $check_client['vat_number'] === $entity['vat_number'];
+
+                        $tax_code_match = isset($entity['tax_code'])
+                            && !empty($check_client['tax_code'])
+                            && $check_client['tax_code'] === $entity['tax_code'];
+
+                        if (!$client_found && ($vat_match || $tax_code_match)) {
+                        
+                            $this->writeLog("INFO - Cliente trovato su FIC per vat_number/tax_code: " . json_encode($check_client));
+                        
+                            $client_found = true;
+                            $entity['id'] = $check_client['id'];
+                            $this->writeExtraAddressValues($billing_address_id, $entity['id']);
+                            break;
+                        }
+                    
+                    }
                 }
             }
-        } else {
-            $entity_to_create = array("data" => $entity);
-            
-            $new_client_request = $fic_client->createClient($entity_to_create);
-            
-            if (isset($new_client_request['error'])) {
-                $this->writeLog("ERROR - Cliente non creato: " . json_encode($new_client_request));
+        
+        
+            if ($client_found) {
+                if (Configuration::get('FATTUREINCLOUD_CUSTOMERS_UPDATE')) {
+                    $entity_to_edit = array("data" => $entity);
+                
+                    $edit_client_request = $fic_client->editClient($entity_to_edit);
+                
+                    if (isset($edit_client_request['error'])) {
+                        $this->writeLog("ERROR - Aggiornamento cliente fallito: " . json_encode($edit_client_request));
+                    } else {
+                        $this->writeLog("INFO - Cliente aggiornato: " . json_encode($edit_client_request));
+                    }
+                }
             } else {
-                $this->writeLog("INFO - Cliente creato: " . json_encode($new_client_request));
-                $entity['id'] = $new_client_request['data']['id'];
-                $this->writeExtraAddressValues($billing_address_id, $entity['id']);
+                $entity_to_create = array("data" => $entity);
+            
+                $new_client_request = $fic_client->createClient($entity_to_create);
+            
+                if (isset($new_client_request['error'])) {
+                    $this->writeLog("ERROR - Cliente non creato: " . json_encode($new_client_request));
+                } else {
+                    $this->writeLog("INFO - Cliente creato: " . json_encode($new_client_request));
+                    $entity['id'] = $new_client_request['data']['id'];
+                    $this->writeExtraAddressValues($billing_address_id, $entity['id']);
+                }
             }
         }
         

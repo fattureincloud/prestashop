@@ -68,6 +68,8 @@ Ecco tutte le opzioni disponibili:
 
 **Sezionale fatture** (opzionale): la numerazione/sezionale che vuoi utilizzare per le fatture emesse per gli ordini provenienti dal negozio.
 
+**Gestisci anagrafica cliente** (opzionale, attiva di default): se attivo il modulo cerca, crea e aggiorna le anagrafiche cliente su Fatture in Cloud e le associa alla fattura. Se disattivo i clienti vengono ignorati: il documento viene emesso senza associazione al cliente e i suoi dati vengono utilizzati solo sul documento. In questo caso l'opzione *Aggiorna anagrafica cliente* non ha effetto.
+
 **Aggiorna anagrafica cliente** (opzionale): aggiorna in automatico le anagrafiche cliente presenti su Fatture in Cloud con i dati del cliente in arrivo dal negozio. *N.B.: se non vuoi che i dati del cliente presenti su Fatture in Cloud siano sovrascritti da quelli presenti su Prestashop, non attivare questa opzione.*
 
 Ricordati di cliccare su *Salva configurazioni* quando hai impostato tutte le opzioni.
